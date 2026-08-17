@@ -1,0 +1,1870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KarNet Admin — Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --ink:#080F1A; --panel:#0B1526; --sidebar:#0A1220; --content-bg:#F3F5F8;
+  --signal:#14D9C4; --signal-dim:#0B8F82; --amber:#FFB020; --danger:#F0596B;
+  --border:#E4E9EF; --text-main:#1B2735; --text-soft:#67788F;
+}
+*{box-sizing:border-box;}
+body{font-family:'Inter',sans-serif; background:var(--content-bg); color:var(--text-main); margin:0;}
+.font-display{font-family:'Space Grotesk',sans-serif;}
+.font-mono{font-family:'JetBrains Mono',monospace;}
+.hidden{display:none !important;}
+
+/* ---------- Login ---------- */
+#loginScreen{min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--ink); position:relative; overflow:hidden;}
+.login-grid{position:absolute; inset:0; background-image:linear-gradient(#14D9C4 1px, transparent 1px), linear-gradient(90deg, #14D9C4 1px, transparent 1px); background-size:56px 56px; opacity:.04;}
+.login-card{position:relative; width:100%; max-width:400px; background:var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:1rem; padding:2.5rem; margin:1.5rem;}
+.input{width:100%; background:var(--sidebar); border:1px solid rgba(255,255,255,.1); border-radius:.5rem; padding:.65rem .9rem; font-size:.85rem; color:#fff; outline:none; transition:border-color .2s;}
+.input:focus{border-color:rgba(20,217,196,.6);}
+.input::placeholder{color:rgba(255,255,255,.25);}
+.input-light{width:100%; background:#fff; border:1px solid var(--border); border-radius:.5rem; padding:.6rem .85rem; font-size:.83rem; color:var(--text-main); outline:none; transition:border-color .2s;}
+.input-light:focus{border-color:var(--signal-dim);}
+label.field-label{font-size:.76rem; color:var(--text-soft); font-weight:500;}
+
+/* ---------- Buttons ---------- */
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:.4rem; padding:.6rem 1.15rem; border-radius:.55rem; font-weight:500; font-size:.82rem; transition:all .2s; white-space:nowrap; cursor:pointer; border:none;}
+.btn-primary{background:var(--signal-dim); color:#fff;}
+.btn-primary:hover{background:#097067;}
+.btn-outline{background:#fff; border:1px solid var(--border); color:var(--text-main);}
+.btn-outline:hover{border-color:var(--signal-dim); color:var(--signal-dim);}
+.btn-danger{background:#FDEDEF; color:var(--danger); border:1px solid #F8D3D9;}
+.btn-danger:hover{background:#F8D3D9;}
+.btn-sm{padding:.4rem .75rem; font-size:.76rem; border-radius:.45rem;}
+.icon-btn{width:2.1rem; height:2.1rem; display:flex; align-items:center; justify-content:center; border-radius:.5rem; border:1px solid var(--border); background:#fff; color:var(--text-soft); cursor:pointer; transition:all .15s;}
+.icon-btn:hover{border-color:var(--signal-dim); color:var(--signal-dim);}
+
+/* ---------- App shell ---------- */
+#appShell{display:none; min-height:100vh;}
+#appShell.active{display:flex;}
+.sidebar{width:250px; background:var(--sidebar); flex-shrink:0; position:fixed; inset:0 auto 0 0; z-index:40; display:flex; flex-direction:column; transition:width .25s, transform .25s;}
+.sidebar.collapsed{width:76px;}
+.sidebar.collapsed .nav-label, .sidebar.collapsed .nav-group-title, .sidebar.collapsed .logo-text{display:none;}
+.main-area{flex:1; margin-left:250px; transition:margin-left .25s; min-width:0;}
+.main-area.expanded{margin-left:76px;}
+.nav-group-title{font-family:'JetBrains Mono',monospace; font-size:.65rem; letter-spacing:.15em; text-transform:uppercase; color:rgba(255,255,255,.3); padding:1.1rem 1.25rem .4rem;}
+.nav-item{display:flex; align-items:center; gap:.75rem; padding:.6rem 1.25rem; color:rgba(255,255,255,.6); font-size:.83rem; cursor:pointer; transition:all .15s; border-left:2px solid transparent; white-space:nowrap;}
+.nav-item:hover{color:#fff; background:rgba(255,255,255,.03);}
+.nav-item.active{color:var(--signal); background:rgba(20,217,196,.07); border-left-color:var(--signal);}
+.topbar{position:sticky; top:0; z-index:30; background:#fff; border-bottom:1px solid var(--border); height:64px; display:flex; align-items:center; justify-content:space-between; padding:0 1.5rem; gap:1rem;}
+.card{background:#fff; border:1px solid var(--border); border-radius:.85rem;}
+.stat-card{background:#fff; border:1px solid var(--border); border-radius:.85rem; padding:1.25rem;}
+.page-section{display:none;}
+.page-section.active{display:block;}
+
+/* ---------- Table ---------- */
+table.dtable{width:100%; border-collapse:collapse; font-size:.82rem;}
+table.dtable thead th{text-align:left; font-size:.7rem; letter-spacing:.06em; text-transform:uppercase; color:var(--text-soft); font-weight:600; padding:.7rem .9rem; border-bottom:1px solid var(--border); background:#FAFBFC;}
+table.dtable tbody td{padding:.75rem .9rem; border-bottom:1px solid var(--border); color:var(--text-main); vertical-align:middle;}
+table.dtable tbody tr:hover{background:#FAFBFC;}
+@media (max-width:820px){
+  table.responsive-table thead{display:none;}
+  table.responsive-table, table.responsive-table tbody, table.responsive-table tr, table.responsive-table td{display:block; width:100%;}
+  table.responsive-table tr{margin-bottom:.85rem; border:1px solid var(--border); border-radius:.7rem; padding:.6rem .8rem; background:#fff;}
+  table.responsive-table td{display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:.4rem 0; border:none; text-align:right;}
+  table.responsive-table td::before{content:attr(data-label); font-weight:600; color:var(--text-soft); font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; text-align:left;}
+}
+
+/* ---------- Badges ---------- */
+.badge{display:inline-flex; align-items:center; gap:.3rem; padding:.22rem .6rem; border-radius:9999px; font-size:.72rem; font-weight:600;}
+.badge-blue{background:#E8F1FE; color:#2568D6;}
+.badge-amber{background:#FFF4E0; color:#B9740A;}
+.badge-purple{background:#F1EBFE; color:#7B4FE0;}
+.badge-teal{background:#E1FBF6; color:#0B8F82;}
+.badge-gray{background:#EEF1F5; color:#5A6B80;}
+.badge-red{background:#FDEDEF; color:#D63A50;}
+.badge-orange{background:#FFEEE0; color:#C25B0A;}
+
+/* ---------- Modal ---------- */
+.modal-overlay{position:fixed; inset:0; background:rgba(10,18,32,.55); backdrop-filter:blur(2px); z-index:100; display:none; align-items:flex-start; justify-content:center; padding:3rem 1rem; overflow-y:auto;}
+.modal-overlay.open{display:flex;}
+.modal-box{width:100%; max-width:640px; background:#fff; border-radius:1rem; padding:1.75rem; max-height:calc(100vh - 6rem);}
+.modal-scroll{overflow-y:auto; max-height:calc(100vh - 14rem);}
+
+/* ---------- Toast ---------- */
+#toastStack{position:fixed; bottom:1.25rem; right:1.25rem; z-index:200; display:flex; flex-direction:column; gap:.6rem;}
+.toast{background:#0A1424; color:#fff; padding:.75rem 1.1rem; border-radius:.6rem; font-size:.82rem; display:flex; align-items:center; gap:.55rem; box-shadow:0 8px 24px rgba(0,0,0,.25); animation:toastIn .2s ease;}
+@keyframes toastIn{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
+
+/* ---------- Misc ---------- */
+.dropdown{position:absolute; top:calc(100% + .5rem); right:0; background:#fff; border:1px solid var(--border); border-radius:.75rem; box-shadow:0 12px 32px rgba(20,30,50,.12); z-index:50; display:none;}
+.dropdown.open{display:block;}
+.mobile-overlay{position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:39; display:none;}
+.mobile-overlay.open{display:block;}
+@media (max-width:900px){
+  .sidebar{transform:translateX(-100%); width:250px;}
+  .sidebar.mobile-open{transform:translateX(0);}
+  .main-area, .main-area.expanded{margin-left:0;}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================ LOGIN ============================================================ -->
+<div id="loginScreen">
+  <div class="login-grid"></div>
+  <div class="login-card">
+    <div class="mb-8">
+      <img src="../assets/karnet-broadband-logo.jpg" alt="KarNet Broadband" class="h-14 w-auto max-w-[260px] object-contain rounded-sm" />
+      <div class="mt-2 font-mono text-[11px] tracking-[0.2em] uppercase text-[var(--signal)]">Owner Admin</div>
+    </div>
+    <h1 class="font-display text-white text-[1.4rem] font-medium">Sign in to your dashboard</h1>
+    <p class="text-white/45 text-[13px] mt-1.5">Authorized KarNet Solutions staff only.</p>
+
+    <div id="loginForm" class="mt-7 space-y-4">
+      <div>
+        <label class="text-[12.5px] text-white/50">Email or Username</label>
+        <input id="loginEmail" type="text" required class="input mt-1.5" placeholder="admin@karnet.co.in" onkeydown="if(event.key==='Enter'){handleLogin(event);}" />
+      </div>
+      <div>
+        <label class="text-[12.5px] text-white/50">Password</label>
+        <div class="relative mt-1.5">
+          <input id="loginPassword" type="password" required class="input pr-10" placeholder="••••••••" onkeydown="if(event.key==='Enter'){handleLogin(event);}" />
+          <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70">
+            <i data-lucide="eye" id="pwToggleIcon" style="width:16px;height:16px"></i>
+          </button>
+        </div>
+      </div>
+      <div class="flex items-center justify-between text-[12.5px]">
+        <label class="flex items-center gap-2 text-white/50 cursor-pointer">
+          <input type="checkbox" id="rememberMe" class="rounded" /> Remember me
+        </label>
+        <a href="#" onclick="showToast('Password reset link sent (mock).','info'); return false;" class="text-[var(--signal)] hover:underline">Forgot password?</a>
+      </div>
+      <p id="loginError" class="text-[12.5px] text-[var(--danger)] hidden">Enter a valid email and password.</p>
+      <button type="button" onclick="handleLogin(event)" class="btn btn-primary w-full !py-2.5">Log In <i data-lucide="arrow-right" style="width:15px;height:15px"></i></button>
+    </div>
+
+    <div class="mt-6 pt-5 border-t border-white/[0.08]">
+      <p class="text-[11.5px] text-white/35 leading-relaxed font-mono">Secure owner login powered by Firebase Authentication.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ APP SHELL ============================================================ -->
+<div id="appShell">
+  <div class="mobile-overlay" id="mobileOverlay" onclick="closeMobileSidebar()"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="flex items-center px-4 h-16 border-b border-white/[0.06] shrink-0 overflow-hidden">
+      <img src="../assets/karnet-broadband-logo.jpg" alt="KarNet Broadband" class="logo-text h-10 w-auto max-w-[205px] object-contain rounded-sm" />
+    </div>
+    <div class="flex-1 overflow-y-auto py-2" id="sidebarNav">
+      <div class="nav-item active" data-page="dashboard" onclick="navigateTo('dashboard')">
+        <i data-lucide="layout-dashboard" style="width:17px;height:17px"></i><span class="nav-label">Dashboard</span>
+      </div>
+
+      <div class="nav-group-title">Content Management</div>
+      <div class="nav-item" data-page="products" onclick="navigateTo('products')"><i data-lucide="package" style="width:17px;height:17px"></i><span class="nav-label">Products</span></div>
+      <div class="nav-item" data-page="solutions" onclick="navigateTo('solutions')"><i data-lucide="layers" style="width:17px;height:17px"></i><span class="nav-label">Solutions</span></div>
+      <div class="nav-item" data-page="faqs" onclick="navigateTo('faqs')"><i data-lucide="help-circle" style="width:17px;height:17px"></i><span class="nav-label">FAQs</span></div>
+      <div class="nav-item" data-page="testimonials" onclick="navigateTo('testimonials')"><i data-lucide="quote" style="width:17px;height:17px"></i><span class="nav-label">Testimonials</span></div>
+      <div class="nav-item" data-page="blog" onclick="navigateTo('blog')"><i data-lucide="newspaper" style="width:17px;height:17px"></i><span class="nav-label">Blog / Resources</span></div>
+      <div class="nav-item" data-page="content" onclick="navigateTo('content')"><i data-lucide="file-text" style="width:17px;height:17px"></i><span class="nav-label">Website Content</span></div>
+      <div class="nav-item" data-page="media" onclick="navigateTo('media')"><i data-lucide="image" style="width:17px;height:17px"></i><span class="nav-label">Media Library</span></div>
+
+      <div class="nav-group-title">Customer Management</div>
+      <div class="nav-item" data-page="enquiries" onclick="navigateTo('enquiries')"><i data-lucide="inbox" style="width:17px;height:17px"></i><span class="nav-label">Enquiries</span></div>
+      <div class="nav-item" data-page="demo" onclick="navigateTo('demo')"><i data-lucide="calendar-clock" style="width:17px;height:17px"></i><span class="nav-label">Demo Requests</span></div>
+      <div class="nav-item" data-page="broadband" onclick="navigateTo('broadband')"><i data-lucide="wifi" style="width:17px;height:17px"></i><span class="nav-label">Broadband Requests</span></div>
+
+      <div class="nav-group-title">Settings</div>
+      <div class="nav-item" data-page="settings-contact" onclick="navigateTo('settings-contact')"><i data-lucide="map-pin" style="width:17px;height:17px"></i><span class="nav-label">Contact Information</span></div>
+      <div class="nav-item" data-page="settings-social" onclick="navigateTo('settings-social')"><i data-lucide="share-2" style="width:17px;height:17px"></i><span class="nav-label">Social Media</span></div>
+      <div class="nav-item" data-page="settings-whatsapp" onclick="navigateTo('settings-whatsapp')"><i data-lucide="message-circle" style="width:17px;height:17px"></i><span class="nav-label">WhatsApp Settings</span></div>
+      <div class="nav-item" data-page="profile" onclick="navigateTo('profile')"><i data-lucide="user-circle" style="width:17px;height:17px"></i><span class="nav-label">Admin Profile</span></div>
+    </div>
+    <div class="p-3 border-t border-white/[0.06] shrink-0">
+      <button onclick="toggleSidebarCollapse()" class="hidden md:flex nav-item !px-2 justify-center w-full rounded-md">
+        <i data-lucide="panel-left-close" id="collapseIcon" style="width:17px;height:17px"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main-area" id="mainArea">
+    <header class="topbar">
+      <div class="flex items-center gap-3">
+        <button class="icon-btn md:hidden" onclick="openMobileSidebar()"><i data-lucide="menu" style="width:18px;height:18px"></i></button>
+        <h1 class="font-display text-[16px] md:text-[18px] font-medium text-[var(--text-main)]" id="pageTitle">Dashboard</h1>
+        <span id="syncBadge" class="hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-[var(--text-soft)] ml-2 pl-3 border-l border-[var(--border)]"></span>
+      </div>
+      <div class="flex items-center gap-2.5 md:gap-3.5 relative">
+        <div class="relative">
+          <button class="icon-btn relative" onclick="toggleDropdown('notifDropdown')">
+            <i data-lucide="bell" style="width:17px;height:17px"></i>
+            <span class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--danger)] text-white text-[9px] flex items-center justify-center font-semibold">3</span>
+          </button>
+          <div class="dropdown w-80" id="notifDropdown">
+            <div class="px-4 py-3 border-b border-[var(--border)] font-medium text-[13px]">Notifications</div>
+            <div id="notifList" class="max-h-80 overflow-y-auto"></div>
+          </div>
+        </div>
+        <div class="relative">
+          <button class="flex items-center gap-2" onclick="toggleDropdown('profileDropdown')">
+            <span id="topProfileAvatar" class="w-8 h-8 rounded-full bg-[var(--signal-dim)] text-white flex items-center justify-center text-[12px] font-semibold font-mono overflow-hidden">AU</span>
+            <i data-lucide="chevron-down" class="hidden sm:block text-[var(--text-soft)]" style="width:14px;height:14px"></i>
+          </button>
+          <div class="dropdown w-52" id="profileDropdown">
+            <div class="px-4 py-3 border-b border-[var(--border)]">
+              <p id="profileDropdownName" class="text-[13px] font-medium">Admin User</p>
+              <p id="profileDropdownEmail" class="text-[11.5px] text-[var(--text-soft)]">admin@karnet.co.in</p>
+            </div>
+            <button onclick="navigateTo('profile'); toggleDropdown('profileDropdown');" class="w-full text-left px-4 py-2.5 text-[13px] hover:bg-[var(--content-bg)] flex items-center gap-2"><i data-lucide="user" style="width:14px;height:14px"></i> Profile</button>
+            <button onclick="handleLogout()" class="w-full text-left px-4 py-2.5 text-[13px] text-[var(--danger)] hover:bg-[var(--content-bg)] flex items-center gap-2"><i data-lucide="log-out" style="width:14px;height:14px"></i> Logout</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="p-4 md:p-7" id="mainContent">
+
+      <!-- ===================== DASHBOARD ===================== -->
+      <section class="page-section active" id="page-dashboard">
+        <div class="grid grid-cols-2 lg:grid-cols-6 gap-3.5" id="statCards"></div>
+
+        <div class="grid lg:grid-cols-3 gap-5 mt-6">
+          <div class="card p-5 lg:col-span-2">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-medium text-[14px]">Enquiries Trend <span class="text-[12px] text-[var(--text-soft)] font-normal">· last 14 days</span></h3>
+            </div>
+            <div style="height:230px"><canvas id="chartEnquiriesTrend"></canvas></div>
+          </div>
+          <div class="card p-5">
+            <h3 class="font-medium text-[14px] mb-3">Enquiries by Status</h3>
+            <div style="height:230px"><canvas id="chartEnquiryStatus"></canvas></div>
+          </div>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-5 mt-5">
+          <div class="card p-5">
+            <h3 class="font-medium text-[14px] mb-3">Demo Requests by Status</h3>
+            <div style="height:220px"><canvas id="chartDemoStatus"></canvas></div>
+          </div>
+          <div class="card p-5">
+            <h3 class="font-medium text-[14px] mb-3">Content Overview <span class="text-[12px] text-[var(--text-soft)] font-normal">· published vs draft</span></h3>
+            <div style="height:220px"><canvas id="chartContentOverview"></canvas></div>
+          </div>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-5 mt-6">
+          <div class="card p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-medium text-[14px]">Recent Enquiries</h3>
+              <button onclick="navigateTo('enquiries')" class="text-[12px] text-[var(--signal-dim)] hover:underline">View all</button>
+            </div>
+            <div id="recentEnquiries" class="space-y-3"></div>
+          </div>
+          <div class="card p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-medium text-[14px]">Recent Demo Requests</h3>
+              <button onclick="navigateTo('demo')" class="text-[12px] text-[var(--signal-dim)] hover:underline">View all</button>
+            </div>
+            <div id="recentDemos" class="space-y-3"></div>
+          </div>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-5 mt-5">
+          <div class="card p-5">
+            <h3 class="font-medium text-[14px] mb-3">Recently Updated Content</h3>
+            <div id="recentContent" class="space-y-3"></div>
+          </div>
+          <div class="card p-5">
+            <h3 class="font-medium text-[14px] mb-3">Quick Actions</h3>
+            <div class="grid grid-cols-2 gap-2.5">
+              <button class="btn btn-outline justify-start" onclick="openProductModal()"><i data-lucide="plus" style="width:14px;height:14px"></i> Add Product</button>
+              <button class="btn btn-outline justify-start" onclick="openSolutionModal()"><i data-lucide="plus" style="width:14px;height:14px"></i> Add Solution</button>
+              <button class="btn btn-outline justify-start" onclick="navigateTo('enquiries')"><i data-lucide="inbox" style="width:14px;height:14px"></i> View Enquiries</button>
+              <button class="btn btn-outline justify-start" onclick="openBlogModal()"><i data-lucide="plus" style="width:14px;height:14px"></i> Add Blog</button>
+              <button class="btn btn-outline justify-start col-span-2" onclick="navigateTo('faqs')"><i data-lucide="help-circle" style="width:14px;height:14px"></i> Manage FAQs</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== PRODUCTS ===================== -->
+      <section class="page-section" id="page-products">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div class="flex flex-wrap gap-2.5">
+            <input class="input-light w-56" placeholder="Search products…" oninput="filterState.products.q=this.value; renderProducts();" />
+            <select class="input-light w-44" onchange="filterState.products.status=this.value; renderProducts();">
+              <option value="">All statuses</option><option>Published</option><option>Draft</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="openProductModal()"><i data-lucide="plus" style="width:15px;height:15px"></i> Add Product</button>
+        </div>
+        <div id="productsGrid" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+      </section>
+
+      <!-- ===================== SOLUTIONS ===================== -->
+      <section class="page-section" id="page-solutions">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div class="flex flex-wrap gap-2.5">
+            <input class="input-light w-56" placeholder="Search solutions…" oninput="filterState.solutions.q=this.value; renderSolutions();" />
+            <select class="input-light w-44" onchange="filterState.solutions.status=this.value; renderSolutions();">
+              <option value="">All statuses</option><option>Published</option><option>Draft</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="openSolutionModal()"><i data-lucide="plus" style="width:15px;height:15px"></i> Add Solution</button>
+        </div>
+        <div id="solutionsGrid" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+      </section>
+
+      <!-- ===================== FAQS ===================== -->
+      <section class="page-section" id="page-faqs">
+        <div class="flex items-center justify-between mb-5">
+          <p class="text-[13px] text-[var(--text-soft)]">Reorder with the arrows — order controls how FAQs appear on the customer site.</p>
+          <button class="btn btn-primary" onclick="openFaqModal()"><i data-lucide="plus" style="width:15px;height:15px"></i> Add FAQ</button>
+        </div>
+        <div id="faqList" class="space-y-3"></div>
+      </section>
+
+      <!-- ===================== TESTIMONIALS ===================== -->
+      <section class="page-section" id="page-testimonials">
+        <div class="flex items-start gap-2.5 mb-5 p-3.5 rounded-lg bg-[#FFF8E8] border border-[#F3E4B8] text-[12.5px] text-[#8A6A10]">
+          <i data-lucide="info" style="width:15px;height:15px" class="shrink-0 mt-0.5"></i>
+          Mock data shown for prototype preview only — replace with real, consented customer testimonials before production use.
+        </div>
+        <div class="flex items-center justify-end mb-5">
+          <button class="btn btn-primary" onclick="openTestimonialModal()"><i data-lucide="plus" style="width:15px;height:15px"></i> Add Testimonial</button>
+        </div>
+        <div id="testimonialsGrid" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+      </section>
+
+      <!-- ===================== BLOG ===================== -->
+      <section class="page-section" id="page-blog">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <input class="input-light w-64" placeholder="Search posts…" oninput="filterState.blog.q=this.value; renderBlog();" />
+          <button class="btn btn-primary" onclick="openBlogModal()"><i data-lucide="plus" style="width:15px;height:15px"></i> New Post</button>
+        </div>
+        <div class="card overflow-x-auto"><table class="dtable responsive-table" id="blogTable"><thead><tr><th>Title</th><th>Category</th><th>Author</th><th>Status</th><th>Publish Date</th><th>Actions</th></tr></thead><tbody id="blogTbody"></tbody></table></div>
+      </section>
+
+      <!-- ===================== WEBSITE CONTENT ===================== -->
+      <section class="page-section" id="page-content">
+        <div class="grid lg:grid-cols-2 gap-5">
+          <div class="card p-6">
+            <h3 class="font-medium text-[14.5px] mb-4">Homepage</h3>
+            <div class="space-y-4">
+              <div><label class="field-label">Hero Title</label><input id="cHeroTitle" class="input-light mt-1.5" /></div>
+              <div><label class="field-label">Hero Description</label><textarea id="cHeroDesc" rows="3" class="input-light mt-1.5"></textarea></div>
+              <div><label class="field-label">Primary CTA Text</label><input id="cCta1" class="input-light mt-1.5" /></div>
+              <div><label class="field-label">Secondary CTA Text</label><input id="cCta2" class="input-light mt-1.5" /></div>
+            </div>
+            <button class="btn btn-primary mt-5" onclick="saveHomepageAbout()">Save Changes</button>
+          </div>
+          <div class="card p-6">
+            <h3 class="font-medium text-[14.5px] mb-4">About</h3>
+            <div class="space-y-4">
+              <div><label class="field-label">Company Description</label><textarea id="cAbout" rows="3" class="input-light mt-1.5"></textarea></div>
+              <div><label class="field-label">Mission</label><textarea id="cMission" rows="2" class="input-light mt-1.5"></textarea></div>
+              <div><label class="field-label">Vision</label><textarea id="cVision" rows="2" class="input-light mt-1.5"></textarea></div>
+              <div><label class="field-label">Values</label><textarea id="cValues" rows="2" class="input-light mt-1.5"></textarea></div>
+            </div>
+            <button class="btn btn-primary mt-5" onclick="saveHomepageAbout()">Save Changes</button>
+          </div>
+          <div class="card p-6">
+            <h3 class="font-medium text-[14.5px] mb-4">Contact</h3>
+            <div class="space-y-4">
+              <div><label class="field-label">Address</label><textarea id="cAddress" rows="2" class="input-light mt-1.5"></textarea></div>
+              <div><label class="field-label">Phone</label><input id="cPhone" class="input-light mt-1.5" /></div>
+              <div><label class="field-label">Email</label><input id="cEmail" class="input-light mt-1.5" /></div>
+              <div><label class="field-label">Google Maps Link / Embed URL</label><input id="cMap" class="input-light mt-1.5" placeholder="Paste Google Maps share link or embed URL" /></div>
+            </div>
+            <p class="text-[11.5px] text-[var(--text-soft)] mt-2">Shares the same record as Settings → Contact Information.</p>
+            <button class="btn btn-primary mt-3" onclick="saveContactInfo('content')">Save Changes</button>
+          </div>
+          <div class="card p-6">
+            <h3 class="font-medium text-[14.5px] mb-4">Footer</h3>
+            <div class="space-y-4">
+              <div><label class="field-label">Footer Text</label><textarea id="cFooter" rows="2" class="input-light mt-1.5"></textarea></div>
+              <p class="text-[12px] text-[var(--text-soft)]">Social links are managed under Settings → Social Media.</p>
+            </div>
+            <button class="btn btn-primary mt-5" onclick="saveHomepageAbout()">Save Changes</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== MEDIA ===================== -->
+      <section class="page-section" id="page-media">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <input class="input-light w-64" placeholder="Search media…" oninput="filterState.media.q=this.value; renderMedia();" />
+          <label class="btn btn-primary cursor-pointer">
+            <i data-lucide="folder-open" style="width:15px;height:15px"></i> Browse Images
+            <input id="mediaFileInput" type="file" class="hidden" accept="image/*" multiple onchange="handleMediaFiles(this.files); this.value='';" />
+          </label>
+        </div>
+        <div id="mediaDropZone" class="card mb-5 p-6 text-center cursor-pointer"
+             onclick="document.getElementById('mediaFileInput').click()"
+             ondragenter="handleMediaDragEnter(event)" ondragover="handleMediaDragOver(event)"
+             ondragleave="handleMediaDragLeave(event)" ondrop="handleMediaDrop(event)">
+          <div class="flex flex-col items-center justify-center gap-2 pointer-events-none">
+            <span class="w-10 h-10 rounded-lg bg-[var(--signal)]/10 border border-[var(--signal)]/20 flex items-center justify-center">
+              <i data-lucide="cloud-upload" class="text-[var(--signal-dim)]" style="width:19px;height:19px"></i>
+            </span>
+            <p class="text-[13.5px] font-medium">Drag & drop images here</p>
+            <p class="text-[11.5px] text-[var(--text-soft)]">or click here to browse from your device · multiple images supported</p>
+            <p id="mediaUploadStatus" class="text-[11.5px] text-[var(--signal-dim)] hidden"></p>
+          </div>
+        </div>
+        <div id="mediaGrid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+      </section>
+
+      <!-- ===================== ENQUIRIES ===================== -->
+      <section class="page-section" id="page-enquiries">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div class="flex flex-wrap gap-2.5">
+            <input class="input-light w-56" placeholder="Search name, phone, email…" oninput="filterState.enquiries.q=this.value; renderEnquiries();" />
+            <select class="input-light w-44" onchange="filterState.enquiries.status=this.value; renderEnquiries();">
+              <option value="">All statuses</option><option>New</option><option>Contacted</option><option>In Progress</option><option>Converted</option><option>Closed</option>
+            </select>
+            <input type="date" class="input-light w-40" onchange="filterState.enquiries.date=this.value; renderEnquiries();" />
+          </div>
+          <button class="btn btn-outline" onclick="refreshCustomerActivity(); showToast('Refreshed from customer site.','success')"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Refresh</button>
+        </div>
+        <div class="card overflow-x-auto"><table class="dtable responsive-table" id="enqTable"><thead><tr><th>Customer</th><th>Company</th><th>Phone</th><th>Email</th><th>Interested In</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="enqTbody"></tbody></table></div>
+      </section>
+
+      <!-- ===================== DEMO REQUESTS ===================== -->
+      <section class="page-section" id="page-demo">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div class="flex flex-wrap gap-2.5">
+            <input class="input-light w-56" placeholder="Search demo requests…" oninput="filterState.demo.q=this.value; renderDemo();" />
+            <select class="input-light w-44" onchange="filterState.demo.status=this.value; renderDemo();">
+              <option value="">All statuses</option><option>New</option><option>Contacted</option><option>Scheduled</option><option>Completed</option><option>Cancelled</option>
+            </select>
+          </div>
+          <button class="btn btn-outline" onclick="refreshCustomerActivity(); showToast('Refreshed from customer site.','success')"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Refresh</button>
+        </div>
+        <div class="card overflow-x-auto"><table class="dtable responsive-table" id="demoTable"><thead><tr><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Product</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="demoTbody"></tbody></table></div>
+      </section>
+
+      <!-- ===================== BROADBAND ===================== -->
+      <section class="page-section" id="page-broadband">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div class="flex flex-wrap gap-2.5">
+            <input class="input-light w-56" placeholder="Search broadband requests…" oninput="filterState.broadband.q=this.value; renderBroadband();" />
+            <select class="input-light w-44" onchange="filterState.broadband.status=this.value; renderBroadband();">
+              <option value="">All statuses</option><option>New</option><option>Contacted</option><option>Verification</option><option>Installation Pending</option><option>Completed</option><option>Not Available</option>
+            </select>
+          </div>
+          <button class="btn btn-outline" onclick="refreshCustomerActivity(); showToast('Refreshed from customer site.','success')"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Refresh</button>
+        </div>
+        <div class="card overflow-x-auto"><table class="dtable responsive-table" id="bbTable"><thead><tr><th>Customer</th><th>Phone</th><th>Email</th><th>Location</th><th>Business</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="bbTbody"></tbody></table></div>
+      </section>
+
+      <!-- ===================== SETTINGS: CONTACT ===================== -->
+      <section class="page-section" id="page-settings-contact">
+        <div class="card p-6 max-w-xl">
+          <h3 class="font-medium text-[14.5px] mb-4">Contact Information</h3>
+          <div class="space-y-4">
+            <div><label class="field-label">Registered Address</label><textarea id="sAddress" rows="2" class="input-light mt-1.5"></textarea></div>
+            <div><label class="field-label">Phone</label><input id="sPhone" class="input-light mt-1.5" /></div>
+            <div><label class="field-label">Email</label><input id="sEmail" class="input-light mt-1.5" /></div>
+            <div><label class="field-label">Google Maps Link / Embed URL</label><input id="sMap" class="input-light mt-1.5" placeholder="Paste Google Maps share link or embed URL" /></div>
+          </div>
+          <button class="btn btn-primary mt-5" onclick="saveContactInfo('settings')">Save Changes</button>
+        </div>
+      </section>
+
+      <!-- ===================== SETTINGS: SOCIAL ===================== -->
+      <section class="page-section" id="page-settings-social">
+        <div class="card p-6 max-w-xl">
+          <h3 class="font-medium text-[14.5px] mb-4">Social Media Links</h3>
+          <div class="space-y-4">
+            <div><label class="field-label">Facebook</label><input id="socFb" class="input-light mt-1.5" placeholder="https://facebook.com/…" /></div>
+            <div><label class="field-label">Instagram</label><input id="socIg" class="input-light mt-1.5" placeholder="https://instagram.com/…" /></div>
+            <div><label class="field-label">LinkedIn</label><input id="socLi" class="input-light mt-1.5" placeholder="https://linkedin.com/company/…" /></div>
+            <div><label class="field-label">YouTube</label><input id="socYt" class="input-light mt-1.5" placeholder="https://youtube.com/@…" /></div>
+            <div><label class="field-label">WhatsApp</label><input id="socWa" class="input-light mt-1.5" placeholder="https://wa.me/…" /></div>
+          </div>
+          <button class="btn btn-primary mt-5" onclick="saveSocial()">Save Changes</button>
+        </div>
+      </section>
+
+      <!-- ===================== SETTINGS: WHATSAPP ===================== -->
+      <section class="page-section" id="page-settings-whatsapp">
+        <div class="card p-6 max-w-xl">
+          <h3 class="font-medium text-[14.5px] mb-4">WhatsApp Settings</h3>
+          <div class="space-y-4">
+            <div><label class="field-label">WhatsApp Number</label><input id="waNumber" class="input-light mt-1.5" placeholder="Not set — add real number" /></div>
+            <div><label class="field-label">Default Message</label><textarea id="waDefault" rows="2" class="input-light mt-1.5"></textarea></div>
+            <div><label class="field-label">Product Enquiry Message</label><textarea id="waProduct" rows="2" class="input-light mt-1.5"></textarea></div>
+            <div><label class="field-label">Broadband Enquiry Message</label><textarea id="waBroadband" rows="2" class="input-light mt-1.5"></textarea></div>
+            <div><label class="field-label">Demo Request Message</label><textarea id="waDemo" rows="2" class="input-light mt-1.5"></textarea></div>
+          </div>
+          <p class="text-[11.5px] text-[var(--text-soft)] mt-2">Leave the number blank until a real WhatsApp Business number is ready — the customer site uses a placeholder until then.</p>
+          <button class="btn btn-primary mt-3" onclick="saveWhatsapp()">Save Changes</button>
+        </div>
+      </section>
+
+      <!-- ===================== ADMIN PROFILE ===================== -->
+      <section class="page-section" id="page-profile">
+        <div class="grid lg:grid-cols-2 gap-5 max-w-3xl">
+          <div class="card p-6">
+            <h3 class="font-medium text-[14.5px] mb-4">Profile</h3>
+            <div class="flex items-center gap-4 mb-5">
+              <span id="profileAvatar" class="w-16 h-16 rounded-full bg-[var(--signal-dim)] text-white flex items-center justify-center text-[20px] font-semibold font-mono overflow-hidden">AU</span>
+              <input id="profilePhotoInput" type="file" accept="image/*" class="hidden" onchange="changeProfilePhoto(this)" />
+              <button class="btn btn-outline btn-sm" onclick="document.getElementById('profilePhotoInput').click()">Change Photo</button>
+            </div>
+            <div class="space-y-4">
+              <div><label class="field-label">Name</label><input id="pName" value="Admin User" class="input-light mt-1.5" /></div>
+              <div><label class="field-label">Email</label><input id="pEmail" value="admin@karnet.co.in" class="input-light mt-1.5" /></div>
+            </div>
+            <button class="btn btn-primary mt-5" onclick="saveAdminProfile()">Save Changes</button>
+          </div>
+          <div class="card p-6">
+            <h3 class="font-medium text-[14.5px] mb-4">Change Password</h3>
+            <div class="space-y-4">
+              <div><label class="field-label">Current Password</label><input type="password" class="input-light mt-1.5" /></div>
+              <div><label class="field-label">New Password</label><input type="password" class="input-light mt-1.5" /></div>
+              <div><label class="field-label">Confirm New Password</label><input type="password" class="input-light mt-1.5" /></div>
+            </div>
+            <button class="btn btn-primary mt-5" onclick="showToast('Password updated (mock).','success')">Update Password</button>
+            <button class="btn btn-danger mt-3 w-full" onclick="handleLogout()"><i data-lucide="log-out" style="width:14px;height:14px"></i> Log Out</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ============================================================ MODAL ============================================================ -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this) closeModal()">
+  <div class="modal-box">
+    <div class="flex items-start justify-between mb-4">
+      <h3 class="font-display text-[17px] font-medium" id="modalTitle">Title</h3>
+      <button onclick="closeModal()" class="icon-btn !border-0"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    </div>
+    <div class="modal-scroll" id="modalBody"></div>
+  </div>
+</div>
+
+<div id="toastStack"></div>
+
+<script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.17.1/firebase-firestore-compat.js"></script>
+
+<script>
+/* =================================================================
+   MOCK DATA LAYER
+   All data below is local/mock only, standing in for a future
+   backend API. UI reads/writes only through the functions in this
+   section so a real API can be swapped in later without touching
+   the render functions.
+================================================================= */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCJ01EnV9RnDGllXBhRwyk-mZO6-4Qk_50",
+  authDomain: "karnet-solutions.firebaseapp.com",
+  projectId: "karnet-solutions",
+  storageBucket: "karnet-solutions.firebasestorage.app",
+  messagingSenderId: "1051136392205",
+  appId: "1:1051136392205:web:d0030388e8f8e6b93ce944",
+  measurementId: "G-H7T6F9J87E"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const OWNER_UID = "rTNCB7hVIbhBfCW77zsuamaks362";
+
+// Cloudinary (safe browser-side values only).
+// Fill these two values from Cloudinary → Settings / Upload presets.
+const CLOUDINARY_CLOUD_NAME = "xay1rk6z";
+const CLOUDINARY_UPLOAD_PRESET = "karnet_unsigned";
+
+
+/* =================================================================
+   FIREBASE STORAGE LAYER
+   Website content lives in karnetSite/{key}. Customer submissions
+   live in separate collections so public visitors can create them
+   without receiving access to existing enquiries.
+================================================================= */
+const KS_PREFIX = "karnet:";
+const KS_LIVE = true;
+const SUBMISSION_KEYS = new Set(["enquiries","demoRequests","broadbandRequests"]);
+function submissionCollection(key){ return "karnet_" + key; }
+async function ksGet(key){
+  try{
+    if(SUBMISSION_KEYS.has(key)){
+      const snap = await db.collection(submissionCollection(key)).get();
+      return snap.docs.map(d => d.data()).sort((a,b)=>(b.id||0)-(a.id||0));
+    }
+    const snap = await db.collection("karnetSite").doc(key).get();
+    return snap.exists ? snap.data().value : null;
+  }catch(e){ console.error("Firestore read failed", key, e); return null; }
+}
+async function ksSet(key, value){
+  try{
+    if(SUBMISSION_KEYS.has(key)){
+      const col = db.collection(submissionCollection(key));
+      const current = await col.get();
+      const wanted = new Set(value.map(x => String(x.id)));
+      let batch = db.batch();
+      let ops = 0;
+      current.docs.forEach(d=>{ if(!wanted.has(d.id)){ batch.delete(d.ref); ops++; } });
+      value.forEach(item=>{ batch.set(col.doc(String(item.id)), item); ops++; });
+      if(ops) await batch.commit();
+      return true;
+    }
+    await db.collection("karnetSite").doc(key).set({ value });
+    return true;
+  }catch(e){ console.error("Firestore write failed", key, e); showToast?.("Could not save to Firebase.","error"); return false; }
+}
+
+let uidCounter = 1000;
+const nextId = () => uidCounter++;
+
+let products = [
+  { id: nextId(), name:"Fibre OS", category:"ERP & Billing Platform", shortDesc:"ERP and billing platform for connectivity and service businesses.", fullDesc:"Fibre OS brings billing, customer records and day-to-day operations into a single platform.", features:"Unified billing, Customer records, Operations dashboard", benefits:"Reduces manual reconciliation, Single source of truth", audience:"Connectivity & subscription-based businesses", ctaText:"Request Demo", ctaLink:"#demo", status:"Published" },
+  { id: nextId(), name:"KANBAN360", category:"Workforce & Workflow Automation", shortDesc:"Visual workflow and task management for teams.", fullDesc:"KANBAN360 organizes tasks, teams and projects into clear, trackable workflows.", features:"Visual boards, Task ownership, Team tracking", benefits:"Reduces status-update overhead, Improves visibility", audience:"Teams & operations", ctaText:"Request Demo", ctaLink:"#demo", status:"Published" },
+];
+
+let solutions = [
+  { id: nextId(), name:"Enterprise Software", category:"SaaS", shortDesc:"Enterprise-grade software and SaaS solutions.", fullDesc:"Built to run core business operations reliably at scale.", features:"Scalable architecture, Business workflows", benefits:"Dependable systems, Built for growth", status:"Published" },
+  { id: nextId(), name:"ERP & Billing", category:"Fibre OS", shortDesc:"ERP and billing in one platform.", fullDesc:"Combines billing and operations for service businesses.", features:"Billing, Operations, Records", benefits:"Less manual work", status:"Published" },
+  { id: nextId(), name:"Workforce & Workflow Automation", category:"KANBAN360", shortDesc:"Workflow automation for teams.", fullDesc:"Organizes work into visual, trackable boards.", features:"Boards, Ownership, Tracking", benefits:"Clarity across teams", status:"Published" },
+  { id: nextId(), name:"AI-Powered Lead Management", category:"AI", shortDesc:"Capture and route leads intelligently.", fullDesc:"Automates lead qualification and routing for sales teams.", features:"Lead scoring, Auto-routing", benefits:"Faster follow-up", status:"Draft" },
+  { id: nextId(), name:"NGO Digital Transformation", category:"Social Impact", shortDesc:"Digital workflows for NGOs.", fullDesc:"Helps mission-driven organizations move to structured digital systems.", features:"Workflow setup, Training support", benefits:"Reduced manual processes", status:"Published" },
+  { id: nextId(), name:"Business Internet & Connectivity", category:"KarNet Broadband", shortDesc:"Business connectivity services.", fullDesc:"Delivered through KarNet Broadband for dependable business access.", features:"Business internet, Dedicated connectivity", benefits:"Reliable access", status:"Published" },
+];
+
+let enquiries = [
+  { id: nextId(), name:"Ravi Kumar", company:"Sundar Textiles", phone:"98450 11223", email:"ravi@sundartextiles.in", interest:"Fibre OS", date:"2026-08-10", status:"New", notes:[] },
+  { id: nextId(), name:"Anitha Rao", company:"GreenLeaf NGO", phone:"99001 44556", email:"anitha@greenleaf.org", interest:"NGO Digital Transformation", date:"2026-08-09", status:"Contacted", notes:["Initial call done, sending proposal."] },
+  { id: nextId(), name:"Mohammed Iqbal", company:"Iqbal Traders", phone:"97400 88771", email:"iqbal@iqbaltraders.com", interest:"Business Internet", date:"2026-08-08", status:"In Progress", notes:[] },
+  { id: nextId(), name:"Deepa Shetty", company:"Shetty Logistics", phone:"96860 33221", email:"deepa@shettylogistics.in", interest:"KANBAN360", date:"2026-08-06", status:"Converted", notes:["Signed up for pilot."] },
+  { id: nextId(), name:"Naveen Gowda", company:"Gowda Enterprises", phone:"90080 66112", email:"naveen@gowdaent.in", interest:"AI-Powered Lead Management", date:"2026-08-03", status:"Closed", notes:["Not proceeding for now."] },
+  { id: nextId(), name:"Priya Menon", company:"Menon & Co", phone:"93430 22110", email:"priya@menonco.in", interest:"Enterprise Software", date:"2026-08-01", status:"New", notes:[] },
+];
+
+let demoRequests = [
+  { id: nextId(), name:"Suresh Patil", company:"Patil Agro", email:"suresh@patilagro.in", phone:"98220 11334", product:"Fibre OS", message:"Would like a walkthrough for our billing team.", date:"2026-08-11", status:"New" },
+  { id: nextId(), name:"Kavya Reddy", company:"Reddy Constructions", email:"kavya@reddycon.in", phone:"99860 55221", product:"KANBAN360", message:"Interested for our site management team.", date:"2026-08-09", status:"Scheduled" },
+  { id: nextId(), name:"Arjun Bhat", company:"Bhat Exports", email:"arjun@bhatexports.in", phone:"98450 77992", product:"Enterprise Solutions", message:"Need a demo for leadership review.", date:"2026-08-07", status:"Contacted" },
+  { id: nextId(), name:"Lakshmi N.", company:"Sunrise NGO", email:"lakshmi@sunrisengo.org", phone:"97420 33110", product:"NGO Digital Transformation", message:"Exploring options for our field teams.", date:"2026-08-04", status:"Completed" },
+  { id: nextId(), name:"Farhan Sheikh", company:"Sheikh Retail", email:"farhan@sheikhretail.in", phone:"96110 88223", product:"Business Internet", message:"Need connectivity for a new branch.", date:"2026-08-02", status:"Cancelled" },
+];
+
+let broadbandRequests = [
+  { id: nextId(), name:"Manjunath H.", phone:"99456 12378", email:"manju@hbuilders.in", location:"Tumakuru — Ashoka Road", business:"H Builders", requirement:"Office connectivity for 15 staff.", date:"2026-08-10", status:"New" },
+  { id: nextId(), name:"Sowmya K.", phone:"98800 44321", email:"sowmya@kdesigns.in", location:"Tumakuru — Sira Road", business:"K Designs Studio", requirement:"Reliable connection for design uploads.", date:"2026-08-08", status:"Verification" },
+  { id: nextId(), name:"Ibrahim Sait", phone:"97400 22119", email:"ibrahim@saitgroup.in", location:"Tumakuru — City Corp area", business:"Sait Trading", requirement:"Backup connectivity line requested.", date:"2026-08-05", status:"Installation Pending" },
+  { id: nextId(), name:"Chandana R.", phone:"96860 77654", email:"chandana@rlogix.in", location:"Tumakuru — Industrial Area", business:"R Logistics", requirement:"New warehouse connectivity.", date:"2026-08-02", status:"Completed" },
+];
+
+let faqs = [
+  { id: nextId(), question:"What does KarNet Solutions offer?", answer:"Enterprise software, workflow automation, AI lead management, digital transformation support, and business connectivity.", category:"General", status:"Published" },
+  { id: nextId(), question:"What is Fibre OS?", answer:"Fibre OS is KarNet's ERP and billing platform for connectivity and service businesses.", category:"Products", status:"Published" },
+  { id: nextId(), question:"What is KANBAN360?", answer:"KANBAN360 is a workforce and workflow automation platform built around visual task boards.", category:"Products", status:"Published" },
+  { id: nextId(), question:"Does KarNet provide business internet?", answer:"Yes, through KarNet Broadband, offering business-focused connectivity services.", category:"Broadband", status:"Published" },
+  { id: nextId(), question:"How do I request a demo?", answer:"Use the Request a Demo button on the website or contact our team directly.", category:"General", status:"Draft" },
+];
+
+let testimonials = [
+  { id: nextId(), name:"Sample Customer A", company:"Sample Business Pvt Ltd", text:"Mock testimonial text for prototype preview.", status:"Draft" },
+  { id: nextId(), name:"Sample Customer B", company:"Sample NGO", text:"Mock testimonial text for prototype preview.", status:"Draft" },
+];
+
+let blogPosts = [
+  { id: nextId(), title:"Why Service Businesses Need a Unified ERP", category:"Technology", author:"KarNet Team", content:"Draft content placeholder.", seoTitle:"", seoDesc:"", status:"Published", date:"2026-08-05" },
+  { id: nextId(), title:"5 Signs Your Team Needs Workflow Automation", category:"Automation", author:"KarNet Team", content:"Draft content placeholder.", seoTitle:"", seoDesc:"", status:"Published", date:"2026-07-28" },
+  { id: nextId(), title:"Digital Transformation for NGOs: Getting Started", category:"Case Study", author:"KarNet Team", content:"Draft content placeholder.", seoTitle:"", seoDesc:"", status:"Draft", date:"" },
+  { id: nextId(), title:"What to Expect From Business-Grade Connectivity", category:"Connectivity", author:"KarNet Team", content:"Draft content placeholder.", seoTitle:"", seoDesc:"", status:"Scheduled", date:"2026-08-20" },
+];
+
+let media = [
+  { id: nextId(), name:"fibreos-hero.png", date:"2026-08-01", type:"PNG", color:"#14D9C4" },
+  { id: nextId(), name:"kanban360-dashboard.jpg", date:"2026-07-28", type:"JPG", color:"#7B4FE0" },
+  { id: nextId(), name:"broadband-banner.jpg", date:"2026-07-20", type:"JPG", color:"#2568D6" },
+  { id: nextId(), name:"office-team.jpg", date:"2026-07-15", type:"JPG", color:"#FFB020" },
+  { id: nextId(), name:"logo-mark.svg", date:"2026-07-01", type:"SVG", color:"#0B8F82" },
+  { id: nextId(), name:"ngo-workshop.jpg", date:"2026-06-22", type:"JPG", color:"#D63A50" },
+];
+
+let settings = {
+  contact: { name: "KarNet Solutions", address: "No. 2, TM Ramu Arcade, Puttaswamaiahna Palya, Sira Gate, Sathyamangala Road, Tumakuru, Karnataka – 572106", phone: "0816 226 6121", email: "hello@karnet.co.in", map: "" },
+  profile: { name: "Admin User", email: "admin@karnet.co.in" },
+  social: { facebook: "", instagram: "", linkedin: "", youtube: "", whatsapp: "" },
+  whatsapp: { number: "", default: "Hello KarNet Solutions, I would like to know more about your services.", product: "Hello KarNet Solutions, I would like to know more about {product}.", broadband: "Hello KarNet Solutions, I would like to know more about your services.", demo: "Hello KarNet Solutions, I would like to request a demo." },
+  content: {
+    heroTitle: "Technology and connectivity built for modern businesses.",
+    heroDesc: "KarNet Solutions delivers enterprise software, intelligent automation, digital transformation, and reliable business connectivity for organizations across India.",
+    cta1: "Explore Solutions", cta2: "Request a Demo",
+    about: "KarNet Solutions builds enterprise software and delivers business connectivity services under KarNet Platforms — bringing together ERP, automation, AI and internet services for organizations that need dependable technology partners.",
+    mission: "To give businesses and organizations dependable technology and connectivity that supports how they actually work.",
+    vision: "To be a trusted technology and connectivity partner for businesses and institutions across Karnataka and beyond.",
+    values: "Reliability, clarity and a practical approach to building technology that organizations can depend on.",
+    footer: "",
+  },
+};
+
+let notifications = [
+  { icon:"inbox", text:"New enquiry received from Priya Menon", time:"2h ago", read:false },
+  { icon:"calendar-clock", text:"New demo request from Suresh Patil", time:"5h ago", read:false },
+  { icon:"wifi", text:"Broadband request received from Manjunath H.", time:"1d ago", read:false },
+  { icon:"package", text:"Product “Fibre OS” was updated", time:"2d ago", read:true },
+  { icon:"newspaper", text:"Blog post published: Why Service Businesses Need a Unified ERP", time:"3d ago", read:true },
+];
+
+const filterState = {
+  products:{q:"",status:""}, solutions:{q:"",status:""}, blog:{q:""}, media:{q:""},
+  enquiries:{q:"",status:"",date:""}, demo:{q:"",status:""}, broadband:{q:"",status:""},
+};
+
+/* =================================================================
+   AUTH
+================================================================= */
+function togglePasswordVisibility(){
+  const inp = document.getElementById("loginPassword");
+  const isPw = inp.type === "password";
+  inp.type = isPw ? "text" : "password";
+  document.getElementById("pwToggleIcon").setAttribute("data-lucide", isPw ? "eye-off" : "eye");
+  lucide.createIcons();
+}
+async function handleLogin(e){
+  if(e && e.preventDefault) e.preventDefault();
+  const email = document.getElementById("loginEmail").value.trim();
+  const pw = document.getElementById("loginPassword").value;
+  const err = document.getElementById("loginError");
+  err.classList.add("hidden");
+  try{
+    const cred = await auth.signInWithEmailAndPassword(email, pw);
+    if(cred.user.uid !== OWNER_UID){
+      await auth.signOut();
+      throw new Error("This account is not authorized for the KarNet admin dashboard.");
+    }
+    // onAuthStateChanged below owns dashboard initialization.
+    // Avoid running initApp twice, which could race chart rendering and Firestore sync.
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("appShell").classList.add("active");
+  }catch(ex){
+    console.error(ex);
+    err.textContent = ex.message.includes("authorized") ? ex.message : "Invalid owner email or password.";
+    err.classList.remove("hidden");
+  }
+  return false;
+}
+async function handleLogout(){
+  await auth.signOut();
+  document.getElementById("appShell").classList.remove("active");
+  document.getElementById("loginScreen").style.display = "flex";
+  document.getElementById("loginPassword").value = "";
+  document.getElementById("loginError").classList.add("hidden");
+}
+
+/* =================================================================
+   NAVIGATION
+================================================================= */
+const PAGE_TITLES = {
+  dashboard:"Dashboard", products:"Products", solutions:"Solutions", faqs:"FAQs",
+  testimonials:"Testimonials", blog:"Blog / Resources", content:"Website Content", media:"Media Library",
+  enquiries:"Enquiries", demo:"Demo Requests", broadband:"Broadband Requests",
+  "settings-contact":"Contact Information", "settings-social":"Social Media", "settings-whatsapp":"WhatsApp Settings", profile:"Admin Profile",
+};
+function navigateTo(page){
+  document.querySelectorAll(".page-section").forEach(s => s.classList.remove("active"));
+  document.getElementById("page-"+page).classList.add("active");
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.page === page));
+  document.getElementById("pageTitle").textContent = PAGE_TITLES[page] || "Dashboard";
+  if(["enquiries","demo","broadband","dashboard"].includes(page)) refreshCustomerActivity();
+  closeMobileSidebar();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+function toggleSidebarCollapse(){
+  document.getElementById("sidebar").classList.toggle("collapsed");
+  document.getElementById("mainArea").classList.toggle("expanded");
+  const collapsed = document.getElementById("sidebar").classList.contains("collapsed");
+  document.getElementById("collapseIcon").setAttribute("data-lucide", collapsed ? "panel-left-open" : "panel-left-close");
+  lucide.createIcons();
+}
+function openMobileSidebar(){ document.getElementById("sidebar").classList.add("mobile-open"); document.getElementById("mobileOverlay").classList.add("open"); }
+function closeMobileSidebar(){ document.getElementById("sidebar").classList.remove("mobile-open"); document.getElementById("mobileOverlay").classList.remove("open"); }
+function toggleDropdown(id){
+  document.querySelectorAll(".dropdown").forEach(d => { if(d.id !== id) d.classList.remove("open"); });
+  document.getElementById(id).classList.toggle("open");
+}
+document.addEventListener("click", (e) => {
+  if(!e.target.closest(".dropdown") && !e.target.closest("button")){
+    document.querySelectorAll(".dropdown").forEach(d => d.classList.remove("open"));
+  }
+});
+
+/* =================================================================
+   TOAST
+================================================================= */
+function showToast(msg, type="info"){
+  const icon = type === "success" ? "check-circle-2" : type === "error" ? "alert-circle" : "info";
+  const color = type === "success" ? "#14D9C4" : type === "error" ? "#F0596B" : "#8CA0BC";
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.innerHTML = `<i data-lucide="${icon}" style="width:16px;height:16px;color:${color}"></i><span>${msg}</span>`;
+  document.getElementById("toastStack").appendChild(el);
+  lucide.createIcons();
+  setTimeout(() => { el.style.opacity="0"; el.style.transition="opacity .3s"; setTimeout(()=>el.remove(),300); }, 3000);
+}
+
+/* =================================================================
+   MODAL
+================================================================= */
+function openModal(title, bodyHtml){
+  document.getElementById("modalTitle").textContent = title;
+  document.getElementById("modalBody").innerHTML = bodyHtml;
+  document.getElementById("modalOverlay").classList.add("open");
+  lucide.createIcons();
+}
+function closeModal(){ document.getElementById("modalOverlay").classList.remove("open"); }
+function confirmDelete(message, onConfirm){
+  openModal("Confirm Delete", `
+    <p class="text-[13.5px] text-[var(--text-soft)] mb-6">${message}</p>
+    <div class="flex justify-end gap-2.5">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+    </div>
+  `);
+  document.getElementById("confirmDeleteBtn").onclick = () => { onConfirm(); closeModal(); };
+}
+
+/* =================================================================
+   BADGE HELPERS
+================================================================= */
+const STATUS_COLORS = {
+  New:"badge-blue", Contacted:"badge-amber", "In Progress":"badge-purple", Converted:"badge-teal", Closed:"badge-gray",
+  Scheduled:"badge-purple", Completed:"badge-teal", Cancelled:"badge-red",
+  Verification:"badge-purple", "Installation Pending":"badge-orange", "Not Available":"badge-red",
+  Published:"badge-teal", Draft:"badge-gray",
+};
+function badge(status){ return `<span class="badge ${STATUS_COLORS[status]||'badge-gray'}">${status}</span>`; }
+
+/* =================================================================
+   RENDER: DASHBOARD
+================================================================= */
+function renderDashboard(){
+  const stats = [
+    { label:"Total Enquiries", value: enquiries.length, icon:"inbox" },
+    { label:"New Enquiries", value: enquiries.filter(e=>e.status==="New").length, icon:"sparkles" },
+    { label:"Demo Requests", value: demoRequests.length, icon:"calendar-clock" },
+    { label:"Products", value: products.length, icon:"package" },
+    { label:"Solutions", value: solutions.length, icon:"layers" },
+    { label:"Blog Posts", value: blogPosts.length, icon:"newspaper" },
+  ];
+  document.getElementById("statCards").innerHTML = stats.map(s => `
+    <div class="stat-card">
+      <div class="flex items-center justify-between">
+        <span class="icon-btn !cursor-default"><i data-lucide="${s.icon}" style="width:15px;height:15px"></i></span>
+      </div>
+      <p class="font-display font-mono text-[1.7rem] font-semibold mt-3">${s.value}</p>
+      <p class="text-[12px] text-[var(--text-soft)] mt-0.5">${s.label}</p>
+    </div>
+  `).join("");
+
+  document.getElementById("recentEnquiries").innerHTML = enquiries.slice(0,4).map(e => `
+    <div class="flex items-center justify-between text-[13px]">
+      <div><p class="font-medium">${e.name}</p><p class="text-[12px] text-[var(--text-soft)]">${e.interest} · ${e.date}</p></div>
+      ${badge(e.status)}
+    </div>
+  `).join("");
+
+  document.getElementById("recentDemos").innerHTML = demoRequests.slice(0,4).map(d => `
+    <div class="flex items-center justify-between text-[13px]">
+      <div><p class="font-medium">${d.name}</p><p class="text-[12px] text-[var(--text-soft)]">${d.product} · ${d.date}</p></div>
+      ${badge(d.status)}
+    </div>
+  `).join("");
+
+  const recentContent = [
+    ...products.map(p=>({t:`Product updated — ${p.name}`, s:p.status})),
+    ...blogPosts.slice(0,2).map(b=>({t:`Blog post — ${b.title}`, s:b.status})),
+  ].slice(0,5);
+  document.getElementById("recentContent").innerHTML = recentContent.map(c => `
+    <div class="flex items-center justify-between text-[13px]">
+      <p class="truncate pr-3">${c.t}</p>${badge(c.s)}
+    </div>
+  `).join("");
+
+  renderDashboardCharts();
+  lucide.createIcons();
+}
+
+/* =================================================================
+   DASHBOARD CHARTS
+   Rendered with Chart.js from the same in-memory mock data used
+   elsewhere on the dashboard. Re-run on every renderDashboard() call
+   (e.g. after an enquiry/demo status change), so existing chart
+   instances are destroyed first to avoid "canvas already in use".
+================================================================= */
+let dashboardCharts = {};
+function destroyChart(key){
+  if(dashboardCharts[key]){ dashboardCharts[key].destroy(); delete dashboardCharts[key]; }
+}
+function renderDashboardCharts(){
+  if(typeof Chart === "undefined") return; // Chart.js failed to load (e.g. offline) — dashboard still works without it.
+
+  // 1) Enquiries trend — count of enquiries per day, last 14 days.
+  const dayLabels = [], dayCounts = [];
+  for(let i = 13; i >= 0; i--){
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0,10);
+    dayLabels.push(key.slice(5).replace("-","/"));
+    dayCounts.push(enquiries.filter(e => e.date === key).length);
+  }
+  destroyChart("trend");
+  dashboardCharts.trend = new Chart(document.getElementById("chartEnquiriesTrend"), {
+    type: "line",
+    data: { labels: dayLabels, datasets: [{
+      label: "Enquiries", data: dayCounts, borderColor: "#0FB5C4",
+      backgroundColor: "rgba(15,181,196,0.14)", fill: true, tension: 0.35,
+      pointRadius: 2.5, pointBackgroundColor: "#0FB5C4",
+    }]},
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } } }, x: { ticks: { font: { size: 10 } } } } }
+  });
+
+  // 2) Enquiries by status — doughnut.
+  const enqStatusOrder = ["New","Contacted","In Progress","Converted","Closed"];
+  const enqStatusColors = { "New":"#2463A8", "Contacted":"#B4790A", "In Progress":"#7C5CFC", "Converted":"#12805C", "Closed":"#8496AC" };
+  destroyChart("enqStatus");
+  dashboardCharts.enqStatus = new Chart(document.getElementById("chartEnquiryStatus"), {
+    type: "doughnut",
+    data: { labels: enqStatusOrder, datasets: [{
+      data: enqStatusOrder.map(s => enquiries.filter(e => e.status === s).length),
+      backgroundColor: enqStatusOrder.map(s => enqStatusColors[s]), borderWidth: 0,
+    }]},
+    options: { responsive: true, maintainAspectRatio: false, cutout: "62%",
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10.5 }, padding: 10 } } } }
+  });
+
+  // 3) Demo requests by status — bar.
+  const demoStatusOrder = ["New","Contacted","Scheduled","Completed","Cancelled"];
+  const demoStatusColors = { "New":"#2463A8", "Contacted":"#B4790A", "Scheduled":"#0FB5C4", "Completed":"#12805C", "Cancelled":"#F0596B" };
+  destroyChart("demoStatus");
+  dashboardCharts.demoStatus = new Chart(document.getElementById("chartDemoStatus"), {
+    type: "bar",
+    data: { labels: demoStatusOrder, datasets: [{
+      label: "Demo Requests", data: demoStatusOrder.map(s => demoRequests.filter(d => d.status === s).length),
+      backgroundColor: demoStatusOrder.map(s => demoStatusColors[s]), borderRadius: 6, maxBarThickness: 34,
+    }]},
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } } }, x: { ticks: { font: { size: 10.5 } } } } }
+  });
+
+  // 4) Content overview — published vs draft, grouped bar.
+  destroyChart("content");
+  dashboardCharts.content = new Chart(document.getElementById("chartContentOverview"), {
+    type: "bar",
+    data: {
+      labels: ["Products","Solutions","Blog Posts"],
+      datasets: [
+        { label: "Published", backgroundColor: "#12805C", borderRadius: 6, maxBarThickness: 26,
+          data: [products, solutions, blogPosts].map(list => list.filter(x => x.status === "Published").length) },
+        { label: "Draft", backgroundColor: "#8496AC", borderRadius: 6, maxBarThickness: 26,
+          data: [products, solutions, blogPosts].map(list => list.filter(x => x.status !== "Published").length) },
+      ],
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10.5 }, padding: 10 } } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } } }, x: { ticks: { font: { size: 10.5 } } } } }
+  });
+}
+
+/* =================================================================
+   RENDER: PRODUCTS
+================================================================= */
+function filterList(list, q, fields){
+  if(!q) return list;
+  const s = q.toLowerCase();
+  return list.filter(item => fields.some(f => (item[f]||"").toString().toLowerCase().includes(s)));
+}
+function renderProducts(){
+  let list = filterList(products, filterState.products.q, ["name","category"]);
+  if(filterState.products.status) list = list.filter(p=>p.status===filterState.products.status);
+  document.getElementById("productsGrid").innerHTML = list.map(p => `
+    <div class="card p-5">
+      <div class="w-full h-28 rounded-lg mb-4 flex items-center justify-center overflow-hidden" style="background:linear-gradient(135deg,#0B1526,#122036)">
+        ${p.imageUrl ? `<img src="${p.imageUrl}" alt="${p.name}" class="w-full h-full object-cover" />` : `<i data-lucide="package" class="text-[var(--signal)]" style="width:26px;height:26px"></i>`}
+      </div>
+      <div class="flex items-start justify-between gap-2">
+        <div><p class="font-medium text-[14.5px]">${p.name}</p><p class="text-[12px] text-[var(--text-soft)]">${p.category}</p></div>
+        ${badge(p.status)}
+      </div>
+      <p class="text-[12.5px] text-[var(--text-soft)] mt-2.5 leading-relaxed">${p.shortDesc}</p>
+      <div class="flex items-center gap-2 mt-4">
+        <button class="btn btn-outline btn-sm" onclick="previewItem('${p.name.replace(/'/g,"\\'")}','${(p.fullDesc||'').replace(/'/g,"\\'")}')"><i data-lucide="eye" style="width:13px;height:13px"></i> Preview</button>
+        <button class="btn btn-outline btn-sm" onclick="openProductModal(${p.id})"><i data-lucide="pencil" style="width:13px;height:13px"></i> Edit</button>
+        <button class="btn btn-outline btn-sm" onclick="toggleStatus('products',${p.id})">${p.status==='Published'?'Unpublish':'Publish'}</button>
+        <button class="icon-btn !text-[var(--danger)]" onclick="confirmDelete('Delete product “${p.name}”? This cannot be undone.', ()=>{products=products.filter(x=>x.id!==${p.id}); ksSet('products',products); renderProducts(); showToast('Product deleted.','success');})"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+      </div>
+    </div>
+  `).join("") || `<p class="text-[13px] text-[var(--text-soft)] col-span-full text-center py-10">No products found.</p>`;
+  lucide.createIcons();
+}
+function openProductModal(id){
+  const item = products.find(p=>p.id===id) || {};
+  openModal(id ? "Edit Product" : "Add Product", `
+    <div class="space-y-4">
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div><label class="field-label">Product Name</label><input id="fName" class="input-light mt-1.5" value="${item.name||''}"/></div>
+        <div><label class="field-label">Category</label><input id="fCategory" class="input-light mt-1.5" value="${item.category||''}"/></div>
+      </div>
+      <div><label class="field-label">Short Description</label><input id="fShort" class="input-light mt-1.5" value="${item.shortDesc||''}"/></div>
+      <div><label class="field-label">Full Description</label><textarea id="fFull" rows="3" class="input-light mt-1.5">${item.fullDesc||''}</textarea></div>
+      ${(()=>{ const fs=(item.features||'').split(',').map(x=>x.trim()); return `
+      <div>
+        <label class="field-label">Product Bullet Points</label>
+        <p class="text-[11.5px] text-[var(--text-soft)] mt-1">These 4 points appear with teal tick marks on the customer website.</p>
+        <div class="grid sm:grid-cols-2 gap-3 mt-2">
+          <div><label class="field-label">Feature 1</label><input id="fFeature1" class="input-light mt-1.5" value="${fs[0]||''}" placeholder="First product feature"/></div>
+          <div><label class="field-label">Feature 2</label><input id="fFeature2" class="input-light mt-1.5" value="${fs[1]||''}" placeholder="Second product feature"/></div>
+          <div><label class="field-label">Feature 3</label><input id="fFeature3" class="input-light mt-1.5" value="${fs[2]||''}" placeholder="Third product feature"/></div>
+          <div><label class="field-label">Feature 4</label><input id="fFeature4" class="input-light mt-1.5" value="${fs[3]||''}" placeholder="Fourth product feature"/></div>
+        </div>
+      </div>`; })()}
+      <div><label class="field-label">Benefits (comma separated)</label><textarea id="fBenefits" rows="2" class="input-light mt-1.5">${item.benefits||''}</textarea></div>
+      <div><label class="field-label">Target Audience</label><input id="fAudience" class="input-light mt-1.5" value="${item.audience||''}"/></div>
+      <div><label class="field-label">Product Image</label>
+        <input id="fImageUrl" type="hidden" value="${item.imageUrl||''}" />
+        <input id="fImageFile" type="file" accept="image/*" class="hidden" onchange="handleInlineImageFiles(this.files,'fImageUrl','fImagePreview','productImageZone'); this.value='';" />
+        <div id="productImageZone" class="mt-1.5 border border-dashed border-[var(--border)] rounded-lg p-4 text-center text-[12.5px] text-[var(--text-soft)] cursor-pointer transition-all"
+             onclick="document.getElementById('fImageFile').click()"
+             ondragenter="handleInlineDrag(event,'productImageZone',true)" ondragover="handleInlineDrag(event,'productImageZone',true)"
+             ondragleave="handleInlineDrag(event,'productImageZone',false)" ondrop="handleInlineDrop(event,'fImageUrl','fImagePreview','productImageZone')">
+          <div id="fImagePreview">${item.imageUrl ? `<img src="${item.imageUrl}" class="w-full h-32 object-cover rounded-md mb-2" alt="Product image" />` : `<i data-lucide="image-plus" class="mx-auto mb-1" style="width:18px;height:18px"></i>`}</div>
+          <span class="font-medium">Drag & drop an image here</span><br/><span class="text-[11.5px]">or click to browse from your device</span>
+        </div>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div><label class="field-label">CTA Text</label><input id="fCtaText" class="input-light mt-1.5" value="${item.ctaText||'Request Demo'}"/></div>
+        <div><label class="field-label">CTA Link</label><input id="fCtaLink" class="input-light mt-1.5" value="${item.ctaLink||''}"/></div>
+      </div>
+      <div><label class="field-label">Status</label>
+        <select id="fStatus" class="input-light mt-1.5"><option ${item.status==='Published'?'selected':''}>Published</option><option ${item.status==='Draft'?'selected':''}>Draft</option></select>
+      </div>
+      <div class="flex justify-end gap-2.5 pt-2">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveProduct(${id||'null'})">Save Product</button>
+      </div>
+    </div>
+  `);
+}
+async function saveProduct(id){
+  const data = {
+    name:val('fName'), category:val('fCategory'), shortDesc:val('fShort'), fullDesc:val('fFull'),
+    features:[val('fFeature1'),val('fFeature2'),val('fFeature3'),val('fFeature4')].filter(Boolean).join(', '), benefits:val('fBenefits'), audience:val('fAudience'),
+    ctaText:val('fCtaText'), ctaLink:val('fCtaLink'), status:val('fStatus'), imageUrl:val('fImageUrl'),
+  };
+  if(!data.name){ showToast('Product name is required.','error'); return; }
+  if(id){ Object.assign(products.find(p=>p.id===id), data); showToast('Product updated.','success'); }
+  else { products.unshift({ id: nextId(), ...data }); showToast('Product added.','success'); }
+  const ok = await ksSet("products", products);
+  if(!ok){ showToast('Product was not saved to Firebase. Check Firestore Rules.','error'); return; }
+  closeModal(); renderProducts(); renderDashboard();
+}
+function val(id){ const el = document.getElementById(id); return el ? el.value.trim() : ""; }
+function toggleStatus(type, id){
+  const map = { products, solutions, faqs, testimonials, blog: blogPosts };
+  const storeKeyMap = { products:"products", solutions:"solutions", faqs:"faqs", testimonials:"testimonials" };
+  const list = map[type];
+  const item = list.find(x=>x.id===id);
+  item.status = item.status === "Published" ? "Draft" : "Published";
+  showToast(`Status changed to ${item.status}.`,'success');
+  if(storeKeyMap[type]) ksSet(storeKeyMap[type], list);
+  ({products:renderProducts, solutions:renderSolutions, faqs:renderFaqs, testimonials:renderTestimonials, blog:renderBlog})[type]();
+}
+function previewItem(title, desc){
+  openModal("Preview — " + title, `<p class="text-[13.5px] text-[var(--text-soft)] leading-relaxed">${desc || "No description provided."}</p><div class="flex justify-end mt-6"><button class="btn btn-outline" onclick="closeModal()">Close</button></div>`);
+}
+
+/* =================================================================
+   RENDER: SOLUTIONS
+================================================================= */
+function renderSolutions(){
+  let list = filterList(solutions, filterState.solutions.q, ["name","category"]);
+  if(filterState.solutions.status) list = list.filter(s=>s.status===filterState.solutions.status);
+  document.getElementById("solutionsGrid").innerHTML = list.map(s => `
+    <div class="card p-5">
+      <div class="w-full h-28 rounded-lg mb-4 flex items-center justify-center" style="background:linear-gradient(135deg,#0B1526,#122036)">
+        <i data-lucide="layers" class="text-[var(--signal)]" style="width:26px;height:26px"></i>
+      </div>
+      <div class="flex items-start justify-between gap-2">
+        <div><p class="font-medium text-[14.5px]">${s.name}</p><p class="text-[12px] text-[var(--text-soft)]">${s.category}</p></div>
+        ${badge(s.status)}
+      </div>
+      <p class="text-[12.5px] text-[var(--text-soft)] mt-2.5 leading-relaxed">${s.shortDesc}</p>
+      <div class="flex items-center gap-2 mt-4">
+        <button class="btn btn-outline btn-sm" onclick="previewItem('${s.name.replace(/'/g,"\\'")}','${(s.fullDesc||'').replace(/'/g,"\\'")}')"><i data-lucide="eye" style="width:13px;height:13px"></i> Preview</button>
+        <button class="btn btn-outline btn-sm" onclick="openSolutionModal(${s.id})"><i data-lucide="pencil" style="width:13px;height:13px"></i> Edit</button>
+        <button class="btn btn-outline btn-sm" onclick="toggleStatus('solutions',${s.id})">${s.status==='Published'?'Unpublish':'Publish'}</button>
+        <button class="icon-btn !text-[var(--danger)]" onclick="confirmDelete('Delete solution “${s.name}”? This cannot be undone.', ()=>{solutions=solutions.filter(x=>x.id!==${s.id}); ksSet('solutions',solutions); renderSolutions(); showToast('Solution deleted.','success');})"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+      </div>
+    </div>
+  `).join("") || `<p class="text-[13px] text-[var(--text-soft)] col-span-full text-center py-10">No solutions found.</p>`;
+  lucide.createIcons();
+}
+function openSolutionModal(id){
+  const item = solutions.find(s=>s.id===id) || {};
+  openModal(id ? "Edit Solution" : "Add Solution", `
+    <div class="space-y-4">
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div><label class="field-label">Solution Name</label><input id="fName" class="input-light mt-1.5" value="${item.name||''}"/></div>
+        <div><label class="field-label">Category</label><input id="fCategory" class="input-light mt-1.5" value="${item.category||''}"/></div>
+      </div>
+      <div><label class="field-label">Short Description</label><input id="fShort" class="input-light mt-1.5" value="${item.shortDesc||''}"/></div>
+      <div><label class="field-label">Detailed Description</label><textarea id="fFull" rows="3" class="input-light mt-1.5">${item.fullDesc||''}</textarea></div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div><label class="field-label">Features</label><textarea id="fFeatures" rows="2" class="input-light mt-1.5">${item.features||''}</textarea></div>
+        <div><label class="field-label">Benefits</label><textarea id="fBenefits" rows="2" class="input-light mt-1.5">${item.benefits||''}</textarea></div>
+      </div>
+      <div><label class="field-label">Image</label>
+        <div class="mt-1.5 border border-dashed border-[var(--border)] rounded-lg p-4 text-center text-[12.5px] text-[var(--text-soft)]"><i data-lucide="image-plus" class="mx-auto mb-1" style="width:18px;height:18px"></i>Click to upload (mock)</div>
+      </div>
+      <div><label class="field-label">CTA Text</label><input id="fCtaText" class="input-light mt-1.5" value="${item.ctaText||'Learn More'}"/></div>
+      <div><label class="field-label">Status</label>
+        <select id="fStatus" class="input-light mt-1.5"><option ${item.status==='Published'?'selected':''}>Published</option><option ${item.status==='Draft'?'selected':''}>Draft</option></select>
+      </div>
+      <div class="flex justify-end gap-2.5 pt-2">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSolution(${id||'null'})">Save Solution</button>
+      </div>
+    </div>
+  `);
+}
+function saveSolution(id){
+  const data = { name:val('fName'), category:val('fCategory'), shortDesc:val('fShort'), fullDesc:val('fFull'), features:val('fFeatures'), benefits:val('fBenefits'), ctaText:val('fCtaText'), status:val('fStatus') };
+  if(!data.name){ showToast('Solution name is required.','error'); return; }
+  if(id){ Object.assign(solutions.find(s=>s.id===id), data); showToast('Solution updated.','success'); }
+  else { solutions.unshift({ id: nextId(), ...data }); showToast('Solution added.','success'); }
+  ksSet("solutions", solutions);
+  closeModal(); renderSolutions(); renderDashboard();
+}
+
+/* =================================================================
+   RENDER: FAQS
+================================================================= */
+function renderFaqs(){
+  document.getElementById("faqList").innerHTML = faqs.map((f,i) => `
+    <div class="card p-4 flex items-start gap-3">
+      <div class="flex flex-col gap-1 pt-1">
+        <button class="icon-btn btn-sm !w-7 !h-7" ${i===0?'disabled style="opacity:.3"':''} onclick="moveFaq(${f.id},-1)"><i data-lucide="chevron-up" style="width:13px;height:13px"></i></button>
+        <button class="icon-btn btn-sm !w-7 !h-7" ${i===faqs.length-1?'disabled style="opacity:.3"':''} onclick="moveFaq(${f.id},1)"><i data-lucide="chevron-down" style="width:13px;height:13px"></i></button>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-start justify-between gap-2">
+          <p class="font-medium text-[13.5px]">${f.question}</p>
+          ${badge(f.status)}
+        </div>
+        <p class="text-[12.5px] text-[var(--text-soft)] mt-1.5 leading-relaxed">${f.answer}</p>
+        <span class="text-[11px] font-mono text-[var(--text-soft)] uppercase tracking-wide">${f.category}</span>
+      </div>
+      <div class="flex flex-col gap-2 shrink-0">
+        <button class="icon-btn" onclick="openFaqModal(${f.id})"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
+        <button class="icon-btn" onclick="toggleStatus('faqs',${f.id})"><i data-lucide="${f.status==='Published'?'eye-off':'eye'}" style="width:14px;height:14px"></i></button>
+        <button class="icon-btn !text-[var(--danger)]" onclick="confirmDelete('Delete this FAQ?', ()=>{faqs=faqs.filter(x=>x.id!==${f.id}); ksSet('faqs',faqs); renderFaqs(); showToast('FAQ deleted.','success');})"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+      </div>
+    </div>
+  `).join("") || `<p class="text-[13px] text-[var(--text-soft)] text-center py-10">No FAQs yet.</p>`;
+  lucide.createIcons();
+}
+function moveFaq(id, dir){
+  const i = faqs.findIndex(f=>f.id===id);
+  const j = i + dir;
+  if(j<0 || j>=faqs.length) return;
+  [faqs[i], faqs[j]] = [faqs[j], faqs[i]];
+  ksSet("faqs", faqs);
+  renderFaqs();
+}
+function openFaqModal(id){
+  const item = faqs.find(f=>f.id===id) || {};
+  openModal(id ? "Edit FAQ" : "Add FAQ", `
+    <div class="space-y-4">
+      <div><label class="field-label">Question</label><input id="fQuestion" class="input-light mt-1.5" value="${item.question||''}"/></div>
+      <div><label class="field-label">Answer</label><textarea id="fAnswer" rows="3" class="input-light mt-1.5">${item.answer||''}</textarea></div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div><label class="field-label">Category</label><input id="fCat" class="input-light mt-1.5" value="${item.category||'General'}"/></div>
+        <div><label class="field-label">Status</label><select id="fStatus" class="input-light mt-1.5"><option ${item.status==='Published'?'selected':''}>Published</option><option ${item.status==='Draft'?'selected':''}>Draft</option></select></div>
+      </div>
+      <div class="flex justify-end gap-2.5 pt-2">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveFaq(${id||'null'})">Save FAQ</button>
+      </div>
+    </div>
+  `);
+}
+function saveFaq(id){
+  const data = { question:val('fQuestion'), answer:val('fAnswer'), category:val('fCat'), status:val('fStatus') };
+  if(!data.question){ showToast('Question is required.','error'); return; }
+  if(id){ Object.assign(faqs.find(f=>f.id===id), data); showToast('FAQ updated.','success'); }
+  else { faqs.push({ id: nextId(), ...data }); showToast('FAQ added.','success'); }
+  ksSet("faqs", faqs);
+  closeModal(); renderFaqs();
+}
+
+/* =================================================================
+   RENDER: TESTIMONIALS
+================================================================= */
+function renderTestimonials(){
+  document.getElementById("testimonialsGrid").innerHTML = testimonials.map(t => `
+    <div class="card p-5">
+      <div class="flex items-center gap-3">
+        <span class="w-10 h-10 rounded-full bg-[var(--signal-dim)] text-white flex items-center justify-center text-[12px] font-semibold font-mono overflow-hidden">${t.imageUrl ? `<img src="${t.imageUrl}" class="w-full h-full object-cover" alt="${t.name}" />` : (t.name||'?').slice(0,2).toUpperCase()}</span>
+        <div><p class="font-medium text-[13.5px]">${t.name}</p><p class="text-[11.5px] text-[var(--text-soft)]">${t.company}</p></div>
+        <span class="ml-auto">${badge(t.status)}</span>
+      </div>
+      <p class="text-[12.5px] text-[var(--text-soft)] mt-3 leading-relaxed">"${t.text}"</p>
+      <div class="flex items-center gap-2 mt-4">
+        <button class="btn btn-outline btn-sm" onclick="openTestimonialModal(${t.id})"><i data-lucide="pencil" style="width:13px;height:13px"></i> Edit</button>
+        <button class="btn btn-outline btn-sm" onclick="toggleStatus('testimonials',${t.id})">${t.status==='Published'?'Unpublish':'Publish'}</button>
+        <button class="icon-btn !text-[var(--danger)]" onclick="confirmDelete('Delete this testimonial?', async ()=>{testimonials=testimonials.filter(x=>x.id!==${t.id}); await ksSet('testimonials',testimonials); renderTestimonials(); showToast('Testimonial deleted.','success');})"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+      </div>
+    </div>
+  `).join("") || `<p class="text-[13px] text-[var(--text-soft)] col-span-full text-center py-10">No testimonials yet.</p>`;
+  lucide.createIcons();
+}
+function openTestimonialModal(id){
+  const item = testimonials.find(t=>t.id===id) || {};
+  openModal(id ? "Edit Testimonial" : "Add Testimonial", `
+    <div class="space-y-4">
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div><label class="field-label">Customer Name</label><input id="fName" class="input-light mt-1.5" value="${item.name||''}"/></div>
+        <div><label class="field-label">Company</label><input id="fCompany" class="input-light mt-1.5" value="${item.company||''}"/></div>
+      </div>
+      <div><label class="field-label">Testimonial</label><textarea id="fText" rows="3" class="input-light mt-1.5">${item.text||''}</textarea></div>
+      <div><label class="field-label">Profile Image</label>
+        <input id="fTestimonialImageUrl" type="hidden" value="${item.imageUrl||''}" />
+        <input id="fTestimonialImageFile" type="file" accept="image/*" class="hidden" onchange="handleInlineImageFiles(this.files,'fTestimonialImageUrl','fTestimonialImagePreview','testimonialImageZone'); this.value='';" />
+        <div id="testimonialImageZone" class="mt-1.5 border border-dashed border-[var(--border)] rounded-lg p-4 text-center text-[12.5px] text-[var(--text-soft)] cursor-pointer"
+             onclick="document.getElementById('fTestimonialImageFile').click()"
+             ondragenter="handleInlineDrag(event,'testimonialImageZone',true)" ondragover="handleInlineDrag(event,'testimonialImageZone',true)"
+             ondragleave="handleInlineDrag(event,'testimonialImageZone',false)" ondrop="handleInlineDrop(event,'fTestimonialImageUrl','fTestimonialImagePreview','testimonialImageZone')">
+          <div id="fTestimonialImagePreview">${item.imageUrl ? `<img src="${item.imageUrl}" class="w-20 h-20 object-cover rounded-full mx-auto mb-2" alt="Profile image" />` : `<i data-lucide="image-plus" class="mx-auto mb-1" style="width:18px;height:18px"></i>`}</div>
+          Drag & drop or click to browse
+        </div>
+      </div>
+      <div><label class="field-label">Status</label><select id="fStatus" class="input-light mt-1.5"><option ${item.status==='Published'?'selected':''}>Published</option><option ${item.status!=='Published'?'selected':''}>Draft</option></select></div>
+      <div class="flex justify-end gap-2.5 pt-2">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveTestimonial(${id||'null'})">Save Testimonial</button>
+      </div>
+    </div>
+  `);
+}
+async function saveTestimonial(id){
+  const data = { name:val('fName'), company:val('fCompany'), text:val('fText'), status:val('fStatus'), imageUrl:val('fTestimonialImageUrl') };
+  if(!data.name){ showToast('Customer name is required.','error'); return; }
+  if(id){ Object.assign(testimonials.find(t=>t.id===id), data); showToast('Testimonial updated.','success'); }
+  else { testimonials.push({ id: nextId(), ...data }); showToast('Testimonial added.','success'); }
+  const ok = await ksSet("testimonials", testimonials);
+  if(!ok){ showToast('Testimonial was not saved to Firebase.','error'); return; }
+  closeModal(); renderTestimonials();
+}
+
+/* =================================================================
+   RENDER: BLOG
+================================================================= */
+function renderBlog(){
+  let list = filterList(blogPosts, filterState.blog.q, ["title","category","author"]);
+  document.getElementById("blogTbody").innerHTML = list.map(b => `
+    <tr>
+      <td data-label="Title" class="font-medium">${b.title}</td>
+      <td data-label="Category">${b.category}</td>
+      <td data-label="Author">${b.author}</td>
+      <td data-label="Status">${badge(b.status)}</td>
+      <td data-label="Publish Date" class="font-mono">${b.date || '—'}</td>
+      <td data-label="Actions">
+        <div class="flex items-center gap-1.5 justify-end md:justify-start">
+          <button class="icon-btn" onclick="openBlogModal(${b.id})"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
+          <button class="icon-btn" onclick="toggleStatus('blog',${b.id})"><i data-lucide="${b.status==='Published'?'eye-off':'eye'}" style="width:14px;height:14px"></i></button>
+          <button class="icon-btn !text-[var(--danger)]" onclick="confirmDelete('Delete post “${b.title}”?', async ()=>{blogPosts=blogPosts.filter(x=>x.id!==${b.id}); await ksSet('blogPosts',blogPosts); renderBlog(); renderDashboard(); showToast('Post deleted.','success');})"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+        </div>
+      </td>
+    </tr>
+  `).join("") || `<tr><td colspan="6" class="text-center text-[13px] text-[var(--text-soft)] py-8">No posts found.</td></tr>`;
+  lucide.createIcons();
+}
+function openBlogModal(id){
+  const item = blogPosts.find(b=>b.id===id) || {};
+  openModal(id ? "Edit Post" : "New Post", `
+    <div class="space-y-4">
+      <div><label class="field-label">Title</label><input id="fTitle" class="input-light mt-1.5" value="${item.title||''}"/></div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div><label class="field-label">Category</label><input id="fCategory" class="input-light mt-1.5" value="${item.category||''}"/></div>
+        <div><label class="field-label">Author</label><input id="fAuthor" class="input-light mt-1.5" value="${item.author||'KarNet Team'}"/></div>
+      </div>
+      <div><label class="field-label">Featured Image</label>
+        <input type="hidden" id="fBlogImageUrl" value="${item.imageUrl||''}">
+        <div id="blogImageDropZone"
+             class="mt-1.5 border border-dashed border-[var(--border)] rounded-lg p-4 text-center text-[12.5px] text-[var(--text-soft)] cursor-pointer transition"
+             onclick="document.getElementById('fBlogImageFile').click()"
+             ondragenter="handleInlineDrag(event,'blogImageDropZone',true)"
+             ondragover="handleInlineDrag(event,'blogImageDropZone',true)"
+             ondragleave="handleInlineDrag(event,'blogImageDropZone',false)"
+             ondrop="handleInlineDrop(event,'fBlogImageUrl','blogImagePreview','blogImageDropZone')">
+          <input id="fBlogImageFile" type="file" accept="image/*" class="hidden" onchange="handleInlineImageFiles(this.files,'fBlogImageUrl','blogImagePreview','blogImageDropZone')">
+          <div id="blogImagePreview">
+            ${item.imageUrl
+              ? `<img src="${item.imageUrl}" alt="Featured image" class="w-full max-h-40 object-cover rounded-md mb-2">`
+              : `<i data-lucide="image-plus" class="mx-auto mb-1" style="width:18px;height:18px"></i><div>Drag & drop an image here or <span class="text-[var(--signal-dim)] font-medium">Browse</span></div>`}
+          </div>
+        </div>
+      </div>
+      <div><label class="field-label">Content</label><textarea id="fContent" rows="4" class="input-light mt-1.5">${item.content||''}</textarea></div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div><label class="field-label">SEO Title</label><input id="fSeoTitle" class="input-light mt-1.5" value="${item.seoTitle||''}"/></div>
+        <div><label class="field-label">SEO Description</label><input id="fSeoDesc" class="input-light mt-1.5" value="${item.seoDesc||''}"/></div>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div><label class="field-label">Status</label><select id="fStatus" class="input-light mt-1.5"><option ${item.status==='Published'?'selected':''}>Published</option><option ${item.status==='Draft'?'selected':''}>Draft</option><option ${item.status==='Scheduled'?'selected':''}>Scheduled</option></select></div>
+        <div><label class="field-label">Publish Date</label><input type="date" id="fDate" class="input-light mt-1.5" value="${item.date||''}"/></div>
+      </div>
+      <div class="flex justify-end gap-2.5 pt-2">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveBlog(${id||'null'})">Save Post</button>
+      </div>
+    </div>
+  `);
+}
+async function saveBlog(id){
+  const data = { title:val('fTitle'), category:val('fCategory'), author:val('fAuthor'), content:val('fContent'), seoTitle:val('fSeoTitle'), seoDesc:val('fSeoDesc'), status:val('fStatus'), date:val('fDate'), imageUrl:val('fBlogImageUrl') };
+  if(!data.title){ showToast('Title is required.','error'); return; }
+  if(id){ Object.assign(blogPosts.find(b=>b.id===id), data); }
+  else { blogPosts.unshift({ id: nextId(), ...data }); }
+  const ok = await ksSet("blogPosts", blogPosts);
+  if(!ok){ showToast('Blog post was not saved to Firebase.','error'); return; }
+  showToast(id ? 'Post updated.' : 'Post created.','success');
+  closeModal(); renderBlog(); renderDashboard();
+}
+
+/* =================================================================
+   INLINE CLOUDINARY IMAGE UPLOADERS (Product/Testimonial)
+================================================================= */
+function handleInlineDrag(e, zoneId, active){
+  e.preventDefault(); e.stopPropagation();
+  const zone=document.getElementById(zoneId);
+  if(zone){ zone.style.borderColor=active?'var(--signal-dim)':''; zone.style.background=active?'rgba(20,217,196,.045)':''; }
+  if(e.dataTransfer) e.dataTransfer.dropEffect='copy';
+}
+function handleInlineDrop(e, urlInputId, previewId, zoneId){
+  e.preventDefault(); e.stopPropagation(); handleInlineDrag(e,zoneId,false);
+  handleInlineImageFiles(e.dataTransfer?.files,urlInputId,previewId,zoneId);
+}
+async function handleInlineImageFiles(fileList, urlInputId, previewId, zoneId){
+  const file=Array.from(fileList||[]).find(f=>f.type&&f.type.startsWith('image/'));
+  if(!file){ showToast('Please choose an image file.','error'); return; }
+  const zone=document.getElementById(zoneId);
+  const old=zone?.innerHTML;
+  if(zone) zone.style.opacity='.65';
+  showToast('Uploading image to Cloudinary…','info');
+  try{
+    const uploaded=await uploadToCloudinary(file);
+    const input=document.getElementById(urlInputId); if(input) input.value=uploaded.secure_url;
+    const preview=document.getElementById(previewId); if(preview) preview.innerHTML=`<img src="${uploaded.secure_url}" class="w-full h-32 object-cover rounded-md mb-2" alt="Uploaded image" />`;
+    showToast('Image uploaded to Cloudinary.','success');
+  }catch(err){ console.error(err); showToast(err.message||'Image upload failed.','error'); }
+  finally{ if(zone) zone.style.opacity='1'; }
+}
+
+/* =================================================================
+   RENDER: MEDIA
+================================================================= */
+function renderMedia(){
+  let list = filterList(media, filterState.media.q, ["name","type"]);
+  document.getElementById("mediaGrid").innerHTML = list.map(m => `
+    <div class="card overflow-hidden">
+      <div class="h-28 flex items-center justify-center" style="background:${m.color||'#14D9C4'}22">
+        ${m.url ? `<img src="${m.url}" alt="${m.name}" class="w-full h-full object-cover" />` : `<i data-lucide="image" style="width:22px;height:22px;color:${m.color||'#14D9C4'}"></i>`}
+      </div>
+      <div class="p-3">
+        <p class="text-[12.5px] font-medium truncate">${m.name}</p>
+        <p class="text-[11px] text-[var(--text-soft)] mt-0.5">${m.type} · ${m.date}</p>
+        <div class="flex items-center gap-1.5 mt-2.5">
+          <button class="icon-btn !w-7 !h-7" onclick="copyImageUrl('${(m.url||'').replace(/'/g,"\\'")}')"><i data-lucide="link" style="width:13px;height:13px"></i></button>
+          <button class="icon-btn !w-7 !h-7 !text-[var(--danger)]" onclick="confirmDelete('Delete “${m.name}”?', async ()=>{media=media.filter(x=>x.id!==${m.id}); await ksSet('media',media); renderMedia(); showToast('Image removed from media library.','success');})"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button>
+        </div>
+      </div>
+    </div>
+  `).join("") || `<p class="text-[13px] text-[var(--text-soft)] col-span-full text-center py-10">No media found.</p>`;
+  lucide.createIcons();
+}
+async function copyImageUrl(url){
+  if(!url){ showToast('No Cloudinary URL available for this item.','error'); return; }
+  try{ await navigator.clipboard.writeText(url); showToast('Cloudinary URL copied.','success'); }
+  catch(e){ showToast('Could not copy URL.','error'); }
+}
+async function uploadToCloudinary(file){
+  if(!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET){
+    throw new Error('Cloudinary is not configured yet. Add your cloud name and unsigned upload preset.');
+  }
+  const body = new FormData();
+  body.append('file', file);
+  body.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  body.append('folder', 'karnet-solutions');
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { method:'POST', body });
+  const data = await response.json();
+  if(!response.ok || !data.secure_url) throw new Error(data.error?.message || 'Cloudinary upload failed.');
+  return data;
+}
+function setMediaDropActive(active){
+  const zone = document.getElementById('mediaDropZone');
+  if(!zone) return;
+  zone.style.borderColor = active ? 'var(--signal-dim)' : '';
+  zone.style.background = active ? 'rgba(20,217,196,.045)' : '';
+}
+function handleMediaDragEnter(e){ e.preventDefault(); e.stopPropagation(); setMediaDropActive(true); }
+function handleMediaDragOver(e){ e.preventDefault(); e.stopPropagation(); if(e.dataTransfer) e.dataTransfer.dropEffect='copy'; setMediaDropActive(true); }
+function handleMediaDragLeave(e){ e.preventDefault(); e.stopPropagation(); if(e.currentTarget===e.target) setMediaDropActive(false); }
+function handleMediaDrop(e){
+  e.preventDefault(); e.stopPropagation(); setMediaDropActive(false);
+  const files = e.dataTransfer ? e.dataTransfer.files : null;
+  handleMediaFiles(files);
+}
+async function handleMediaFiles(fileList){
+  const files = Array.from(fileList || []).filter(file => file.type && file.type.startsWith('image/'));
+  if(!files.length){ showToast('Please choose image files only.','error'); return; }
+  const status = document.getElementById('mediaUploadStatus');
+  if(status){ status.classList.remove('hidden'); status.textContent = `Uploading 0 of ${files.length}…`; }
+  let uploadedCount = 0;
+  let failedCount = 0;
+  showToast(`Uploading ${files.length} image${files.length===1?'':'s'} to Cloudinary…`,'info');
+  for(let i=0;i<files.length;i++){
+    const file = files[i];
+    try{
+      if(status) status.textContent = `Uploading ${i+1} of ${files.length}: ${file.name}`;
+      const uploaded = await uploadToCloudinary(file);
+      media.unshift({
+        id: nextId(),
+        name:file.name,
+        date:new Date().toISOString().slice(0,10),
+        type:(uploaded.format || file.name.split('.').pop() || 'IMG').toUpperCase(),
+        color:'#14D9C4',
+        url:uploaded.secure_url,
+        publicId:uploaded.public_id,
+        width:uploaded.width,
+        height:uploaded.height
+      });
+      uploadedCount++;
+    }catch(err){
+      failedCount++;
+      console.error('Cloudinary upload failed for', file.name, err);
+    }
+  }
+  if(uploadedCount){
+    try{ await ksSet('media', media); }
+    catch(err){ console.error(err); showToast('Images uploaded, but Media Library could not be saved to Firebase.','error'); }
+    renderMedia();
+  }
+  if(status){
+    status.textContent = failedCount ? `${uploadedCount} uploaded · ${failedCount} failed` : `${uploadedCount} image${uploadedCount===1?'':'s'} uploaded successfully`;
+    setTimeout(()=>status.classList.add('hidden'), 3500);
+  }
+  if(failedCount) showToast(`${uploadedCount} uploaded, ${failedCount} failed.`, 'error');
+  else showToast(`${uploadedCount} image${uploadedCount===1?'':'s'} uploaded to Cloudinary.`, 'success');
+}
+
+/* =================================================================
+   RENDER: ENQUIRIES / DEMO / BROADBAND
+================================================================= */
+function renderEnquiries(){
+  let list = filterList(enquiries, filterState.enquiries.q, ["name","phone","email"]);
+  if(filterState.enquiries.status) list = list.filter(e=>e.status===filterState.enquiries.status);
+  if(filterState.enquiries.date) list = list.filter(e=>e.date===filterState.enquiries.date);
+  document.getElementById("enqTbody").innerHTML = list.map(e => `
+    <tr>
+      <td data-label="Customer" class="font-medium">${e.name}</td>
+      <td data-label="Company">${e.company}</td>
+      <td data-label="Phone" class="font-mono">${e.phone}</td>
+      <td data-label="Email">${e.email}</td>
+      <td data-label="Interested In">${e.interest}</td>
+      <td data-label="Date" class="font-mono">${e.date}</td>
+      <td data-label="Status">${badge(e.status)}</td>
+      <td data-label="Actions">
+        <div class="flex items-center gap-1.5 justify-end md:justify-start">
+          <button class="icon-btn" onclick="openEnquiryDetail(${e.id})"><i data-lucide="eye" style="width:14px;height:14px"></i></button>
+          <button class="icon-btn !text-[var(--danger)]" onclick="confirmDelete('Delete enquiry from “${e.name}”?', ()=>{enquiries=enquiries.filter(x=>x.id!==${e.id}); ksSet('enquiries',enquiries); renderEnquiries(); renderDashboard(); showToast('Enquiry deleted.','success');})"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+        </div>
+      </td>
+    </tr>
+  `).join("") || `<tr><td colspan="8" class="text-center text-[13px] text-[var(--text-soft)] py-8">No enquiries found.</td></tr>`;
+  lucide.createIcons();
+}
+function openEnquiryDetail(id){
+  const e = enquiries.find(x=>x.id===id);
+  const statuses = ["New","Contacted","In Progress","Converted","Closed"];
+  openModal("Enquiry — " + e.name, `
+    <div class="space-y-3 text-[13.5px]">
+      <div class="grid sm:grid-cols-2 gap-3">
+        <p><span class="text-[var(--text-soft)]">Company:</span> ${e.company}</p>
+        <p><span class="text-[var(--text-soft)]">Interested In:</span> ${e.interest}</p>
+        <p><span class="text-[var(--text-soft)]">Phone:</span> ${e.phone}</p>
+        <p><span class="text-[var(--text-soft)]">Email:</span> ${e.email}</p>
+        <p><span class="text-[var(--text-soft)]">Date:</span> ${e.date}</p>
+      </div>
+      <div>
+        <label class="field-label">Status</label>
+        <select id="detailStatus" class="input-light mt-1.5">${statuses.map(s=>`<option ${e.status===s?'selected':''}>${s}</option>`).join("")}</select>
+      </div>
+      <div>
+        <label class="field-label">Internal Notes</label>
+        <div class="mt-1.5 space-y-1.5 max-h-24 overflow-y-auto">${e.notes.map(n=>`<p class="text-[12px] bg-[var(--content-bg)] rounded px-2.5 py-1.5">${n}</p>`).join("") || '<p class="text-[12px] text-[var(--text-soft)]">No notes yet.</p>'}</div>
+        <textarea id="detailNote" rows="2" class="input-light mt-2" placeholder="Add an internal note…"></textarea>
+      </div>
+      <div class="flex justify-end gap-2.5 pt-2">
+        <button class="btn btn-outline" onclick="closeModal()">Close</button>
+        <button class="btn btn-primary" onclick="saveEnquiryDetail(${id})">Save</button>
+      </div>
+    </div>
+  `);
+}
+function saveEnquiryDetail(id){
+  const e = enquiries.find(x=>x.id===id);
+  e.status = val('detailStatus');
+  const note = val('detailNote');
+  if(note) e.notes.push(note);
+  ksSet("enquiries", enquiries);
+  closeModal(); renderEnquiries(); renderDashboard(); showToast('Enquiry updated.','success');
+}
+
+function renderDemo(){
+  let list = filterList(demoRequests, filterState.demo.q, ["name","company","email"]);
+  if(filterState.demo.status) list = list.filter(d=>d.status===filterState.demo.status);
+  document.getElementById("demoTbody").innerHTML = list.map(d => `
+    <tr>
+      <td data-label="Name" class="font-medium">${d.name}</td>
+      <td data-label="Company">${d.company}</td>
+      <td data-label="Email">${d.email}</td>
+      <td data-label="Phone" class="font-mono">${d.phone}</td>
+      <td data-label="Product">${d.product}</td>
+      <td data-label="Date" class="font-mono">${d.date}</td>
+      <td data-label="Status">${badge(d.status)}</td>
+      <td data-label="Actions">
+        <div class="flex items-center gap-1.5 justify-end md:justify-start">
+          <button class="icon-btn" onclick="openDemoDetail(${d.id})"><i data-lucide="eye" style="width:14px;height:14px"></i></button>
+          <button class="icon-btn !text-[var(--danger)]" onclick="confirmDelete('Delete demo request from “${d.name}”?', ()=>{demoRequests=demoRequests.filter(x=>x.id!==${d.id}); ksSet('demoRequests',demoRequests); renderDemo(); renderDashboard(); showToast('Demo request deleted.','success');})"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+        </div>
+      </td>
+    </tr>
+  `).join("") || `<tr><td colspan="8" class="text-center text-[13px] text-[var(--text-soft)] py-8">No demo requests found.</td></tr>`;
+  lucide.createIcons();
+}
+function openDemoDetail(id){
+  const d = demoRequests.find(x=>x.id===id);
+  const statuses = ["New","Contacted","Scheduled","Completed","Cancelled"];
+  openModal("Demo Request — " + d.name, `
+    <div class="space-y-3 text-[13.5px]">
+      <div class="grid sm:grid-cols-2 gap-3">
+        <p><span class="text-[var(--text-soft)]">Company:</span> ${d.company}</p>
+        <p><span class="text-[var(--text-soft)]">Product:</span> ${d.product}</p>
+        <p><span class="text-[var(--text-soft)]">Phone:</span> ${d.phone}</p>
+        <p><span class="text-[var(--text-soft)]">Email:</span> ${d.email}</p>
+      </div>
+      <p><span class="text-[var(--text-soft)]">Message:</span> ${d.message}</p>
+      <div><label class="field-label">Status</label><select id="detailStatus" class="input-light mt-1.5">${statuses.map(s=>`<option ${d.status===s?'selected':''}>${s}</option>`).join("")}</select></div>
+      <div><label class="field-label">Notes</label><textarea id="detailNote" rows="2" class="input-light mt-1.5" placeholder="Add a note…"></textarea></div>
+      <div class="flex justify-end gap-2.5 pt-2"><button class="btn btn-outline" onclick="closeModal()">Close</button><button class="btn btn-primary" onclick="saveDemoDetail(${id})">Save</button></div>
+    </div>
+  `);
+}
+function saveDemoDetail(id){
+  const d = demoRequests.find(x=>x.id===id);
+  d.status = val('detailStatus');
+  ksSet("demoRequests", demoRequests);
+  closeModal(); renderDemo(); renderDashboard(); showToast('Demo request updated.','success');
+}
+
+function renderBroadband(){
+  let list = filterList(broadbandRequests, filterState.broadband.q, ["name","phone","email","location"]);
+  if(filterState.broadband.status) list = list.filter(b=>b.status===filterState.broadband.status);
+  document.getElementById("bbTbody").innerHTML = list.map(b => `
+    <tr>
+      <td data-label="Customer" class="font-medium">${b.name}</td>
+      <td data-label="Phone" class="font-mono">${b.phone}</td>
+      <td data-label="Email">${b.email}</td>
+      <td data-label="Location">${b.location}</td>
+      <td data-label="Business">${b.business}</td>
+      <td data-label="Date" class="font-mono">${b.date}</td>
+      <td data-label="Status">${badge(b.status)}</td>
+      <td data-label="Actions">
+        <div class="flex items-center gap-1.5 justify-end md:justify-start">
+          <button class="icon-btn" onclick="openBroadbandDetail(${b.id})"><i data-lucide="eye" style="width:14px;height:14px"></i></button>
+          <button class="icon-btn !text-[var(--danger)]" onclick="confirmDelete('Delete broadband request from “${b.name}”?', ()=>{broadbandRequests=broadbandRequests.filter(x=>x.id!==${b.id}); ksSet('broadbandRequests',broadbandRequests); renderBroadband(); showToast('Request deleted.','success');})"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+        </div>
+      </td>
+    </tr>
+  `).join("") || `<tr><td colspan="8" class="text-center text-[13px] text-[var(--text-soft)] py-8">No broadband requests found.</td></tr>`;
+  lucide.createIcons();
+}
+function openBroadbandDetail(id){
+  const b = broadbandRequests.find(x=>x.id===id);
+  const statuses = ["New","Contacted","Verification","Installation Pending","Completed","Not Available"];
+  openModal("Broadband Request — " + b.name, `
+    <div class="space-y-3 text-[13.5px]">
+      <div class="grid sm:grid-cols-2 gap-3">
+        <p><span class="text-[var(--text-soft)]">Business:</span> ${b.business}</p>
+        <p><span class="text-[var(--text-soft)]">Location:</span> ${b.location}</p>
+        <p><span class="text-[var(--text-soft)]">Phone:</span> ${b.phone}</p>
+        <p><span class="text-[var(--text-soft)]">Email:</span> ${b.email}</p>
+      </div>
+      <p><span class="text-[var(--text-soft)]">Requirement:</span> ${b.requirement}</p>
+      <div><label class="field-label">Status</label><select id="detailStatus" class="input-light mt-1.5">${statuses.map(s=>`<option ${b.status===s?'selected':''}>${s}</option>`).join("")}</select></div>
+      <div class="flex justify-end gap-2.5 pt-2"><button class="btn btn-outline" onclick="closeModal()">Close</button><button class="btn btn-primary" onclick="saveBroadbandDetail(${id})">Save</button></div>
+    </div>
+  `);
+}
+function saveBroadbandDetail(id){
+  const b = broadbandRequests.find(x=>x.id===id);
+  b.status = val('detailStatus');
+  ksSet("broadbandRequests", broadbandRequests);
+  closeModal(); renderBroadband(); showToast('Broadband request updated.','success');
+}
+
+/* =================================================================
+   NOTIFICATIONS
+================================================================= */
+function renderNotifications(){
+  document.getElementById("notifList").innerHTML = notifications.map(n => `
+    <div class="flex items-start gap-3 px-4 py-3 border-b border-[var(--border)] last:border-0 ${n.read?'':'bg-[#F3FBFA]'}">
+      <span class="icon-btn !w-8 !h-8 shrink-0 !cursor-default"><i data-lucide="${n.icon}" style="width:14px;height:14px"></i></span>
+      <div class="min-w-0"><p class="text-[12.5px] leading-snug">${n.text}</p><p class="text-[11px] text-[var(--text-soft)] mt-0.5">${n.time}</p></div>
+    </div>
+  `).join("");
+  lucide.createIcons();
+}
+
+/* =================================================================
+   INIT
+================================================================= */
+async function syncCollection(key, localRef, setter){
+  const remote = await ksGet(key);
+  if(remote){ setter(remote); }
+  else { await ksSet(key, localRef); }
+}
+async function seedAndSync(){
+  if(!KS_LIVE) return;
+  await Promise.all([
+    syncCollection("products", products, v => products = v),
+    syncCollection("solutions", solutions, v => solutions = v),
+    syncCollection("faqs", faqs, v => faqs = v),
+    syncCollection("testimonials", testimonials, v => testimonials = v),
+    syncCollection("blogPosts", blogPosts, v => blogPosts = v),
+    syncCollection("media", media, v => media = v),
+    syncCollection("enquiries", enquiries, v => enquiries = v),
+    syncCollection("demoRequests", demoRequests, v => demoRequests = v),
+    syncCollection("broadbandRequests", broadbandRequests, v => broadbandRequests = v),
+  ]);
+  const remoteSettings = await ksGet("settings");
+  if(remoteSettings){
+    settings = {
+      ...settings,
+      ...remoteSettings,
+      contact: { ...settings.contact, ...(remoteSettings.contact || {}) },
+      profile: { ...settings.profile, ...(remoteSettings.profile || {}) },
+      social: { ...settings.social, ...(remoteSettings.social || {}) },
+      whatsapp: { ...settings.whatsapp, ...(remoteSettings.whatsapp || {}) },
+      content: { ...settings.content, ...(remoteSettings.content || {}) },
+    };
+  } else { await ksSet("settings", settings); }
+}
+async function refreshCustomerActivity(){
+  const [e, d, b] = await Promise.all([ksGet("enquiries"), ksGet("demoRequests"), ksGet("broadbandRequests")]);
+  if(e) enquiries = e;
+  if(d) demoRequests = d;
+  if(b) broadbandRequests = b;
+  renderEnquiries(); renderDemo(); renderBroadband(); renderDashboard();
+}
+let submissionUnsubscribers = [];
+function startSubmissionLiveSync(){
+  submissionUnsubscribers.forEach(fn => { try{ fn(); }catch(e){} });
+  submissionUnsubscribers = [];
+  const bind = (key, setter) => {
+    const unsub = db.collection(submissionCollection(key)).onSnapshot(snap => {
+      const rows = snap.docs.map(d => d.data()).sort((a,b)=>(b.id||0)-(a.id||0));
+      setter(rows);
+      renderEnquiries(); renderDemo(); renderBroadband(); renderDashboard();
+    }, err => console.error("Submission live sync failed", key, err));
+    submissionUnsubscribers.push(unsub);
+  };
+  bind("enquiries", v => enquiries = v);
+  bind("demoRequests", v => demoRequests = v);
+  bind("broadbandRequests", v => broadbandRequests = v);
+}
+function populateSettingsForms(){
+  settings.contact = settings.contact || {};
+  settings.profile = settings.profile || { name: "Admin User", email: "admin@karnet.co.in", photoURL: "" };
+  settings.social = settings.social || {};
+  settings.whatsapp = settings.whatsapp || {};
+  settings.content = settings.content || {};
+
+  const setField = (id, value) => {
+    const el = document.getElementById(id);
+    if(el) el.value = value ?? "";
+  };
+
+  setField("pName", settings.profile.name || settings.contact.name || "Admin User");
+  setField("pEmail", settings.profile.email || settings.contact.email || "");
+  renderAdminProfile();
+
+  setField("sAddress", settings.contact.address);
+  setField("sPhone", settings.contact.phone);
+  setField("sEmail", settings.contact.email);
+  setField("sMap", settings.contact.map);
+  setField("cAddress", settings.contact.address);
+  setField("cPhone", settings.contact.phone);
+  setField("cEmail", settings.contact.email);
+  setField("cMap", settings.contact.map);
+
+  setField("socFb", settings.social.facebook);
+  setField("socIg", settings.social.instagram);
+  setField("socLi", settings.social.linkedin);
+  setField("socYt", settings.social.youtube);
+  setField("socWa", settings.social.whatsapp);
+
+  setField("waNumber", settings.whatsapp.number);
+  setField("waDefault", settings.whatsapp.default);
+  setField("waProduct", settings.whatsapp.product);
+  setField("waBroadband", settings.whatsapp.broadband);
+  setField("waDemo", settings.whatsapp.demo);
+
+  setField("cHeroTitle", settings.content.heroTitle);
+  setField("cHeroDesc", settings.content.heroDesc);
+  setField("cCta1", settings.content.cta1);
+  setField("cCta2", settings.content.cta2);
+  setField("cAbout", settings.content.about);
+  setField("cMission", settings.content.mission);
+  setField("cVision", settings.content.vision);
+  setField("cValues", settings.content.values);
+  setField("cFooter", settings.content.footer);
+}
+async function saveContactInfo(source){
+  settings.contact = { ...settings.contact, address: val(source==='settings'?'sAddress':'cAddress'), phone: val(source==='settings'?'sPhone':'cPhone'), email: val(source==='settings'?'sEmail':'cEmail'), map: val(source==='settings'?'sMap':'cMap') };
+  await ksSet("settings", settings);
+  populateSettingsForms();
+  showToast('Contact information saved.','success');
+}
+function profileInitials(name){
+  return (name || 'Admin User').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase() || 'AU';
+}
+function renderAdminProfile(){
+  const profile = settings.profile || {};
+  const name = profile.name || 'Admin User';
+  const email = profile.email || '';
+  const photo = profile.photoURL || '';
+  const html = photo ? `<img src="${photo}" alt="Profile" class="w-full h-full object-cover" />` : profileInitials(name);
+  const avatar = document.getElementById('profileAvatar');
+  const topAvatar = document.getElementById('topProfileAvatar');
+  if(avatar) avatar.innerHTML = html;
+  if(topAvatar) topAvatar.innerHTML = html;
+  const topName = document.getElementById('profileDropdownName');
+  const topEmail = document.getElementById('profileDropdownEmail');
+  if(topName) topName.textContent = name;
+  if(topEmail) topEmail.textContent = email;
+}
+async function changeProfilePhoto(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ showToast('Please select an image file.','error'); return; }
+  if(file.size > 5 * 1024 * 1024){ showToast('Profile image must be under 5 MB.','error'); return; }
+  try{
+    showToast('Uploading profile photo...','success');
+    const uploaded = await uploadToCloudinary(file);
+    settings.profile = { ...(settings.profile || {}), photoURL: uploaded.secure_url };
+    const ok = await ksSet('settings', settings);
+    if(!ok) throw new Error('Could not save profile photo to Firebase.');
+    renderAdminProfile();
+    showToast('Profile photo updated.','success');
+  }catch(err){ console.error(err); showToast(err.message || 'Profile photo update failed.','error'); }
+  input.value = '';
+}
+async function saveAdminProfile(){
+  const name = val('pName');
+  const email = val('pEmail');
+  if(!name){ showToast('Name is required.','error'); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showToast('Enter a valid email address.','error'); return; }
+  settings.profile = { ...(settings.profile || {}), name, email };
+  settings.contact = { ...settings.contact, name, email };
+  const ok = await ksSet('settings', settings);
+  if(!ok){ showToast('Could not save profile to Firebase.','error'); return; }
+  populateSettingsForms();
+  renderAdminProfile();
+  showToast('Name and email updated and synced with customer site.','success');
+}
+
+async function saveSocial(){
+  settings.social = { facebook: val('socFb'), instagram: val('socIg'), linkedin: val('socLi'), youtube: val('socYt'), whatsapp: val('socWa') };
+  await ksSet("settings", settings);
+  showToast('Social media links saved.','success');
+}
+async function saveWhatsapp(){
+  settings.whatsapp = { number: val('waNumber'), default: val('waDefault'), product: val('waProduct'), broadband: val('waBroadband'), demo: val('waDemo') };
+  await ksSet("settings", settings);
+  showToast('WhatsApp settings saved.','success');
+}
+async function saveHomepageAbout(){
+  settings.content = { ...settings.content, heroTitle: val('cHeroTitle'), heroDesc: val('cHeroDesc'), cta1: val('cCta1'), cta2: val('cCta2'), about: val('cAbout'), mission: val('cMission'), vision: val('cVision'), values: val('cValues'), footer: val('cFooter') };
+  await ksSet("settings", settings);
+  showToast('Website content saved.','success');
+}
+function updateSyncBadge(){
+  const el = document.getElementById("syncBadge");
+  if(!el) return;
+  el.classList.remove("hidden"); el.classList.add("flex");
+  el.innerHTML = KS_LIVE
+    ? `<span class="w-1.5 h-1.5 rounded-full bg-[var(--signal)]"></span> Synced with customer site`
+    : `<span class="w-1.5 h-1.5 rounded-full bg-[#B7C2D0]"></span> Offline preview — open as a Claude artifact to sync`;
+}
+function renderAllAdminViews(){
+  updateSyncBadge();
+  const renderers = [
+    renderDashboard, renderProducts, renderSolutions, renderFaqs, renderTestimonials,
+    renderBlog, renderMedia, renderEnquiries, renderDemo, renderBroadband, renderNotifications
+  ];
+  renderers.forEach(fn => {
+    try { fn(); } catch (err) { console.error(`Admin render failed in ${fn.name}`, err); }
+  });
+  try { populateSettingsForms(); } catch (err) { console.error('Settings form population failed', err); }
+  try { lucide.createIcons(); } catch (err) { console.error('Lucide refresh failed', err); }
+}
+async function initApp(){
+  // Render immediately from local/default data so graphs, products and solutions
+  // never stay blank while Firestore is loading or the network is slow.
+  renderAllAdminViews();
+  try{
+    await seedAndSync();
+  }catch(err){
+    console.error('Admin sync failed; keeping local dashboard visible.', err);
+    showToast('Dashboard loaded. Firebase sync will retry when available.','info');
+  }
+  // Re-render with the latest Firebase data after sync completes.
+  renderAllAdminViews();
+}
+
+auth.onAuthStateChanged(async (user) => {
+  if(user && user.uid === OWNER_UID){
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("appShell").classList.add("active");
+    await initApp();
+    startSubmissionLiveSync();
+  } else {
+    submissionUnsubscribers.forEach(fn => { try{ fn(); }catch(e){} });
+    submissionUnsubscribers = [];
+    document.getElementById("appShell").classList.remove("active");
+    document.getElementById("loginScreen").style.display = "flex";
+  }
+});
+lucide.createIcons();
+</script>
+</body>
+</html>
